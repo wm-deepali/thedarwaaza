@@ -2,24 +2,34 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
-use App\Models\Category;
 use App\Models\Product;
-use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
+use App\Models\Category;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
-use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Gd\Driver;
+use Illuminate\Http\Request;
 use Intervention\Image\Format;
+use Illuminate\Validation\Rule;
+use Illuminate\Http\UploadedFile;
+use App\Http\Controllers\Controller;
+use Intervention\Image\ImageManager;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class CategoryController extends Controller
 {
     // Slugs that already belong to fixed routes (catch-all /{slug} must not override them)
     private const RESERVED_SLUGS = [
-        'index', 'about', 'contact', 'enquiry', 'strength',
-        'admin', 'login', 'logout', 'register', 'storage', 'api',
+        'index',
+        'about',
+        'contact',
+        'enquiry',
+        'strength',
+        'admin',
+        'login',
+        'logout',
+        'register',
+        'storage',
+        'api',
     ];
 
     // ✅ List
@@ -44,7 +54,7 @@ class CategoryController extends Controller
             }
         }
 
-        $sortBy    = $request->get('sort_by', 'id');
+        $sortBy = $request->get('sort_by', 'id');
         $sortOrder = in_array($request->get('sort_order'), ['asc', 'desc']) ? $request->sort_order : 'desc';
 
         if (in_array($sortBy, ['id', 'name', 'sort_order', 'status', 'show_in_navbar'])) {
@@ -192,20 +202,22 @@ class CategoryController extends Controller
     private function rules(?Category $category = null): array
     {
         return [
-            'name'             => 'required|string|max:255',
-            'slug'             => [
-                'required', 'string', 'max:255',
+            'name' => 'required|string|max:255',
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
                 Rule::unique('categories', 'slug')->ignore($category?->id),
                 Rule::notIn(self::RESERVED_SLUGS),
             ],
-            'parent_id'        => 'nullable|exists:categories,id',
-            'image'            => 'nullable|mimes:jpg,jpeg,png,webp|max:2048',
-            'banner_image'     => 'nullable|mimes:jpg,jpeg,png,webp|max:4096',
-            'meta_title'       => 'nullable|string|max:255',
+            'parent_id' => 'nullable|exists:categories,id',
+            'image' => 'nullable|mimes:jpg,jpeg,png,webp|max:2048',
+            'banner_image' => 'nullable|mimes:jpg,jpeg,png,webp|max:4096',
+            'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
-            'meta_keywords'    => 'nullable|string',
-            'canonical_url'    => 'nullable|url|max:255',
-            'sort_order'       => 'nullable|integer|min:0',
+            'meta_keywords' => 'nullable|string',
+            'canonical_url' => 'nullable|url|max:255',
+            'sort_order' => 'nullable|integer|min:0',
         ];
     }
 
@@ -219,16 +231,16 @@ class CategoryController extends Controller
     private function payload(Request $request): array
     {
         return [
-            'name'             => $request->name,
-            'slug'             => $request->slug,
-            'parent_id'        => $request->parent_id ?: null,
-            'meta_title'       => $request->meta_title,
+            'name' => $request->name,
+            'slug' => $request->slug,
+            'parent_id' => $request->parent_id ?: null,
+            'meta_title' => $request->meta_title,
             'meta_description' => $request->meta_description,
-            'meta_keywords'    => $request->meta_keywords,
-            'canonical_url'    => $request->canonical_url,
-            'sort_order'       => $request->sort_order ?? 0,
-            'show_in_navbar'   => $request->boolean('show_in_navbar'),
-            'status'           => $request->boolean('status'),
+            'meta_keywords' => $request->meta_keywords,
+            'canonical_url' => $request->canonical_url,
+            'sort_order' => $request->sort_order ?? 0,
+            'show_in_navbar' => $request->boolean('show_in_navbar'),
+            'status' => $request->boolean('status'),
         ];
     }
 
@@ -267,4 +279,90 @@ class CategoryController extends Controller
 
         return $path;
     }
+
+    // ✅ Add many categories at once (one name per line)
+    public function storeBulk(Request $request)
+    {
+        $request->validate([
+            'names' => ['required', 'string'],
+            'parent_id' => ['nullable', 'exists:categories,id'],
+            'status' => ['nullable', 'boolean'],
+            'show_in_navbar' => ['nullable', 'boolean'],
+        ], [
+            'names.required' => 'Enter at least one category name.',
+        ]);
+
+        if ($this->parentHasProducts($request)) {
+            return back()
+                ->withErrors(['parent_id' => 'This category already has products. Remove them before adding sub categories under it.'])
+                ->withInput();
+        }
+
+        // One name per line, trimmed, blanks and repeated lines removed
+        $names = collect(preg_split('/\r\n|\r|\n/', $request->names))
+            ->map(fn($n) => trim($n))
+            ->filter()
+            ->unique(fn($n) => mb_strtolower($n))
+            ->values();
+
+        if ($names->isEmpty()) {
+            return back()->withErrors(['names' => 'Enter at least one category name.'])->withInput();
+        }
+
+        if ($names->count() > 100) {
+            return back()->withErrors(['names' => 'Add at most 100 categories at a time.'])->withInput();
+        }
+
+        $parentId = $request->parent_id ?: null;
+        $sort = ((int) Category::where('parent_id', $parentId)->max('sort_order')) + 1;
+        $created = 0;
+        $skipped = [];
+
+        foreach ($names as $name) {
+            if (mb_strlen($name) > 255) {
+                $skipped[] = "'" . Str::limit($name, 40) . "' is too long.";
+                continue;
+            }
+
+            $exists = Category::where('parent_id', $parentId)
+                ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
+                ->exists();
+
+            if ($exists) {
+                $skipped[] = "'{$name}' already exists here.";
+                continue;
+            }
+
+            $base = Str::slug($name);
+            if ($base === '') {
+                $skipped[] = "'{$name}' has no usable letters or numbers for a URL.";
+                continue;
+            }
+
+            // Unique slug, never a reserved one
+            $slug = $base;
+            $i = 2;
+            while (in_array($slug, self::RESERVED_SLUGS, true) || Category::where('slug', $slug)->exists()) {
+                $slug = $base . '-' . $i++;
+            }
+
+            Category::create([
+                'name' => $name,
+                'slug' => $slug,
+                'parent_id' => $parentId,
+                'sort_order' => $sort++,
+                'show_in_navbar' => $request->boolean('show_in_navbar'),
+                'status' => $request->boolean('status', true),
+            ]);
+
+            $created++;
+        }
+
+        Cache::forget('nav_categories');
+
+        return redirect()->route('admin.categories.index')
+            ->with($created ? 'success' : 'error', "{$created} categories added.")
+            ->with('bulk_skipped', $skipped);
+    }
+
 }

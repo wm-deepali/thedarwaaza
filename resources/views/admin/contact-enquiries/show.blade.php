@@ -10,18 +10,18 @@
             <!-- Page Header -->
             <div class="page-header">
                 <div>
-                    <h1>Contact Enquiry Details</h1>
+                    <h1>Enquiry Details</h1>
 
                     <div class="crumb">
                         <a href="{{ route('admin.dashboard') }}">Dashboard</a>
                         <span>›</span>
-                        <a href="{{ route('admin.contact-enquiries.index') }}">Contact Enquiries</a>
+                        <a href="{{ route('admin.contact-enquiries.index') }}">Enquiries</a>
                         <span>›</span>
                         View Enquiry
                     </div>
                 </div>
 
-                <a href="{{ route('admin.contact-enquiries.index') }}" class="btn-secondary-dash">
+                <a href="{{ url()->previous() }}" class="btn-secondary-dash">
                     <i class="fa fa-arrow-left"></i>
                     Back
                 </a>

@@ -820,25 +820,6 @@
                         onclick="switchTab('smtp', this)">
                         <i class="fa-solid fa-envelope"></i> SMTP / Email
                     </button>
-                    <button class="tab-btn {{ $activeTab == 'payment' ? 'active' : '' }}"
-                        onclick="switchTab('payment', this)">
-                        <i class="fa-solid fa-credit-card"></i> Payment Gateway
-                    </button>
-                    <button class="tab-btn {{ $activeTab == 'shipping' ? 'active' : '' }}"
-                        onclick="switchTab('shipping', this)">
-                        <i class="fa-solid fa-box"></i> Shipping Charges
-                    </button>
-                    <button class="tab-btn {{ $activeTab == 'gst' ? 'active' : '' }}" onclick="switchTab('gst', this)">
-                        <i class="fa-solid fa-file-invoice"></i> GST &amp; Invoice
-                    </button>
-                    <button class="tab-btn {{ $activeTab == 'couriers' ? 'active' : '' }}"
-                        onclick="switchTab('couriers', this)">
-                        <i class="fa-solid fa-truck"></i> Courier Management
-                    </button>
-                    <button class="tab-btn {{ $activeTab == 'tracking' ? 'active' : '' }}"
-                        onclick="switchTab('tracking', this)">
-                        <i class="fa-brands fa-google"></i> Tracking &amp; Pixels
-                    </button>
                 </div>
 
                 <div class="tab-panel {{ $activeTab == 'general' ? 'active' : '' }}" id="tab-general">
@@ -847,23 +828,7 @@
                 <div class="tab-panel {{ $activeTab == 'smtp' ? 'active' : '' }}" id="tab-smtp">
                     @include('admin.admin-settings.smtp')
                 </div>
-                <div class="tab-panel {{ $activeTab == 'payment' ? 'active' : '' }}" id="tab-payment">
-                    @include('admin.admin-settings.payment')
-                </div>
-                <div class="tab-panel {{ $activeTab == 'shipping' ? 'active' : '' }}" id="tab-shipping">
-                    @include('admin.admin-settings.shipping')
-                </div>
-                <div class="tab-panel {{ $activeTab == 'gst' ? 'active' : '' }}" id="tab-gst">
-                    @include('admin.admin-settings.invoice-gst')
-                </div>
-                <div class="tab-panel {{ $activeTab == 'couriers' ? 'active' : '' }}" id="tab-couriers">
-                    @include('admin.admin-settings.couriers')
-                </div>
-                <div class="tab-panel {{ $activeTab == 'tracking' ? 'active' : '' }}" id="tab-tracking">
-                    @include('admin.admin-settings.google-setting')
-                </div>
-
-
+        
             </div>
 
         </div>

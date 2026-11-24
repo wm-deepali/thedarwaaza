@@ -10,12 +10,53 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ContactEnquiryController extends Controller
 {
-    public function index()
-    {
-        $enquiries = ContactEnquiry::with('product')->latest()->paginate(10);
-        $unreadCount = ContactEnquiry::where('is_read', false)->count();
+    // tab key => [label shown, value saved in contact_enquiries.type]
+    private const TABS = [
+        'contact' => ['Contact',   'Contact Enquiry'],
+        'product' => ['Product',   'Product Enquiry'],
+        'home'    => ['Home Page', 'Home Page Enquiry'],
+        'general' => ['General',   'General Enquiry'],
+    ];
 
-        return view('admin.contact-enquiries.index', compact('enquiries', 'unreadCount'));
+    public function index(Request $request)
+    {
+        $tab = array_key_exists($request->query('tab'), self::TABS) ? $request->query('tab') : 'all';
+
+        $query = ContactEnquiry::with('product')->latest();
+
+        if ($tab !== 'all') {
+            $query->where('type', self::TABS[$tab][1]);
+        }
+
+        $enquiries = $query->paginate(10)->withQueryString();
+
+        // One query for all tab counts
+        $counts = ContactEnquiry::selectRaw(
+                'type, COUNT(*) as total, SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) as unread'
+            )
+            ->groupBy('type')
+            ->get()
+            ->keyBy('type');
+
+        $tabs = [
+            'all' => [
+                'label'  => 'All',
+                'total'  => (int) $counts->sum('total'),
+                'unread' => (int) $counts->sum('unread'),
+            ],
+        ];
+
+        foreach (self::TABS as $key => [$label, $type]) {
+            $tabs[$key] = [
+                'label'  => $label,
+                'total'  => (int) ($counts[$type]->total ?? 0),
+                'unread' => (int) ($counts[$type]->unread ?? 0),
+            ];
+        }
+
+        $unreadCount = $tabs['all']['unread'];
+
+        return view('admin.contact-enquiries.index', compact('enquiries', 'unreadCount', 'tabs', 'tab'));
     }
 
     public function show(ContactEnquiry $contactEnquiry)
@@ -29,11 +70,15 @@ class ContactEnquiryController extends Controller
         return view('admin.contact-enquiries.show', ['enquiry' => $contactEnquiry]);
     }
 
-    public function export()
+    // File name is unchanged. The export follows the tab you are on.
+    public function export(Request $request)
     {
+        $tab  = $request->query('tab');
+        $type = array_key_exists($tab, self::TABS) ? self::TABS[$tab][1] : null;
+
         $filename = 'contact_enquiries_' . now()->format('Y_m_d_His') . '.xlsx';
 
-        return Excel::download(new ContactEnquiriesExport(), $filename);
+        return Excel::download(new ContactEnquiriesExport($type), $filename);
     }
 
     public function bulkDelete(Request $request)

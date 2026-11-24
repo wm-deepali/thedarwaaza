@@ -9,7 +9,7 @@
             <!-- Page header -->
             <div class="page-header">
                 <div>
-                    <h1>Contact Enquiries
+                    <h1>Enquiries
                         @if($unreadCount > 0)
                             <span class="pill-new" style="margin-left:8px">{{ $unreadCount }} new</span>
                         @endif
@@ -17,12 +17,12 @@
                     <div class="crumb">
                         <a href="{{ route('admin.dashboard') }}">Dashboard</a>
                         <span>›</span>
-                        Contact Enquiries
+                        Enquiries
                     </div>
                 </div>
 
                 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                    <a href="{{ route('admin.contact-enquiries.export') }}" class="btn-green">
+                    <a href="{{ route('admin.contact-enquiries.export', $tab !== 'all' ? ['tab' => $tab] : []) }}" class="btn-green">
                         <i class="fa fa-file-excel-o"></i> Export Excel
                     </a>
                 </div>
@@ -30,6 +30,20 @@
 
             <!-- Main card -->
             <div class="surface-card">
+
+                <!-- Type tabs -->
+                <div class="tabs">
+                    @foreach($tabs as $key => $t)
+                        <a href="{{ route('admin.contact-enquiries.index', $key === 'all' ? [] : ['tab' => $key]) }}"
+                           class="tab {{ $tab === $key ? 'active' : '' }}">
+                            {{ $t['label'] }}
+                            <span class="tab-count">{{ $t['total'] }}</span>
+                            @if($t['unread'] > 0)
+                                <span class="pill-new">{{ $t['unread'] }} new</span>
+                            @endif
+                        </a>
+                    @endforeach
+                </div>
 
                 <!-- Bulk action bar -->
                 <div class="bulk-bar" id="bulkBar">
@@ -130,7 +144,7 @@
                                     <td colspan="9">
                                         <div class="empty-state">
                                             <div class="empty-icon"><i class="fa fa-envelope"></i></div>
-                                            <p>No enquiries found. Contact form submissions will appear here.</p>
+                                            <p>No enquiries found here. Form submissions will appear in this list.</p>
                                         </div>
                                     </td>
                                 </tr>

@@ -14,9 +14,16 @@ class ContactEnquiriesExport implements FromCollection, WithHeadings, WithMappin
 {
     private int $index = 0;
 
+    public function __construct(private ?string $type = null)
+    {
+    }
+
     public function collection()
     {
-        return ContactEnquiry::with('product')->orderBy('created_at', 'desc')->get();
+        return ContactEnquiry::with('product')
+            ->when($this->type, fn ($q) => $q->where('type', $this->type))
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 
     public function headings(): array

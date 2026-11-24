@@ -188,7 +188,7 @@
                                         @endforeach
                                     </ul>
                                 </li>
-                                <li><a href="{{ asset('pdf/thedarwaaza.pdf') }}" target="_blank">Brochure</a></li>
+                                <li><a href="{{ asset('assets/pdf/thedarwaaza.pdf') }}" target="_blank">Brochure</a></li>
                                 <li><a href="{{ route('contact') }}">CONTACT US</a></li>
                             </ul>
                         </div>
@@ -231,7 +231,7 @@
                                 <li><i class="fas fa-arrow-right" aria-hidden="true"></i> <a
                                         href="{{ route('about') }}">About us</a></li>
                                 <li><i class="fas fa-arrow-right" aria-hidden="true"></i> <a
-                                        href="{{ asset('pdf/thedarwaaza.pdf') }}" target="_blank">Brochure</a></li>
+                                        href="{{ asset('assets/pdf/thedarwaaza.pdf') }}" target="_blank">Brochure</a></li>
                                 <li><i class="fas fa-arrow-right" aria-hidden="true"></i> <a
                                         href="{{ route('contact') }}">Contact us</a></li>
                                 <li><i class="fas fa-arrow-right" aria-hidden="true"></i> <a

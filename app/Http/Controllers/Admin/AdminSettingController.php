@@ -27,7 +27,6 @@ class AdminSettingController extends Controller
                 'general',
                 'states',
                 'activeTab',
-                'google_setting',
             )
         );
     }

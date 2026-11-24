@@ -953,3 +953,124 @@
     font-size: 11.5px;
     color: var(--text-hint);
 }
+
+/* ── Tabs ───────────────────────────────────────────────── */
+.tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border);
+    background: #fafafa;
+}
+
+.tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: var(--font);
+}
+
+.tab:hover {
+    color: var(--text-primary);
+}
+
+.tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+/* ── Import steps ───────────────────────────────────────── */
+.steps {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 18px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.step span {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-size: 11.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.steps code {
+    background: var(--bg);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+/* ── Alerts ─────────────────────────────────────────────── */
+.alert-box {
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
+.alert-box ul {
+    margin: 6px 0 0 18px;
+    padding: 0;
+}
+
+.alert-ok {
+    background: var(--green-bg);
+    color: var(--green);
+    border: 1px solid rgba(0, 122, 94, .2);
+}
+
+.alert-err {
+    background: var(--red-bg);
+    color: var(--red);
+    border: 1px solid #f5c6c6;
+}
+
+a.tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none !important;
+}
+
+.tab-count {
+    background: var(--bg);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+}
+
+.tab.active .tab-count {
+    background: var(--accent-light);
+    color: var(--accent);
+}

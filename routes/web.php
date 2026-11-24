@@ -51,7 +51,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('/profile-setting', ProfileSettingController::class);
         Route::post('/resetpassword', [ProfileSettingController::class, 'resetPassword'])->name('reset.password');
 
+        Route::post('categories/bulk', [CategoryController::class, 'storeBulk'])->name('categories.bulk-store');
         Route::resource('categories', CategoryController::class)->except(['show']);
+        
+        Route::get('products/import-template', [ProductController::class, 'importTemplate'])->name('products.import-template');
+        Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
         Route::resource('products', ProductController::class)->only(['index', 'store', 'update', 'destroy']);
 
         Route::resource('contact-locations', ContactLocationController::class)->except(['show']);
