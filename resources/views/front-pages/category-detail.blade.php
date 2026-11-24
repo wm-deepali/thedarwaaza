@@ -1,10 +1,5 @@
 @extends('layouts.app')
 
-@section('title', $category->meta_title ?: $category->name . ' | The Darwaaza')
-@section('meta_description', $category->meta_description)
-@section('meta_keywords', $category->meta_keywords)
-@section('canonical', $category->canonical_url ?: url($category->slug))
-
 @section('content')
 
     <div class="inner-banner has-base-color-overlay text-center"
@@ -20,9 +15,9 @@
                     <ul class="list-inline link-list">
                         <li><a href="{{ url('/') }}">Home</a></li>
                         @foreach($category->ancestors() as $ancestor)
-                            <li><a href="{{ url($ancestor->slug) }}">{{ $ancestor->name }}</a></li>
+                            <li><a href="{{ route('category.show', $ancestor->slug) }}">{{ $ancestor->name }}</a></li>
                         @endforeach
-                        <li><a href="{{ url($category->slug) }}">{{ $category->name }}</a></li>
+                        <li><a href="{{ route('category.show', $category->slug) }}">{{ $category->name }}</a></li>
                     </ul>
                 </div>
             </div>
@@ -31,7 +26,7 @@
 
     <section class="our-services style-2">
         <div class="container">
-            @forelse($category->activeChildren->chunk(4) as $chunk)
+            @foreach($category->activeChildren->chunk(4) as $chunk)
                 <div class="row">
                     @if($chunk->count() < 4)
                         <div class="cent-col">
@@ -40,13 +35,15 @@
                         @foreach($chunk as $child)
                             <div class="col-md-3 col-sm-6">
                                 <div class="single-our-service">
-                                    <figure class="img-box">
-                                        <a href="{{ url($child->slug) }}">
-                                            <img src="{{ $child->image_url }}" alt="{{ $child->name }}">
-                                        </a>
-                                    </figure>
+                                    @if($child->image_url)
+                                        <figure class="img-box">
+                                            <a href="{{ route('category.show', $child->slug) }}">
+                                                <img src="{{ $child->image_url }}" alt="{{ $child->name }}">
+                                            </a>
+                                        </figure>
+                                    @endif
                                     <div class="text-box">
-                                        <a href="{{ url($child->slug) }}">
+                                        <a href="{{ route('category.show', $child->slug) }}">
                                             <h4>{{ $child->name }}</h4>
                                         </a>
                                     </div>
@@ -54,17 +51,11 @@
                             </div>
                         @endforeach
 
-                        @if($chunk->count() < 4)
-                            </div>
-                        @endif
+                    @if($chunk->count() < 4)
+                        </div>
+                    @endif
                 </div>
-            @empty
-                <div class="row">
-                    <div class="col-md-12 text-center">
-                        <p>No products found in this category.</p>
-                    </div>
-                </div>
-            @endforelse
+            @endforeach
         </div>
     </section>
 

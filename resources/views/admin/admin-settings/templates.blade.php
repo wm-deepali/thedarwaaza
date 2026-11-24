@@ -1026,7 +1026,7 @@
         }
     </style>
 
-    <div class="app-content content container-fluid">
+       <div class="app-content content container-fluid">
         <div class="sp-page">
 
             <!-- Page header -->
@@ -1034,18 +1034,18 @@
                 <div>
                     <h1 class="sp-page-title">Message Templates</h1>
                     <div class="sp-crumb">
-                        <a href="#">Dashboard</a>
+                        <a href="{{ route('admin.dashboard') }}">Dashboard</a>
                         <span class="sp-crumb-sep">›</span>
-                        <a href="#">Admin Settings</a>
+                        <a href="{{ route('admin.admin-setting.index', ['tab' => 'general']) }}">Settings</a>
                         <span class="sp-crumb-sep">›</span>
                         <span>Message Templates</span>
                     </div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap">
-                    <button class="sp-btn sp-btn-secondary" onclick="openTestModal()">
+                    <button class="sp-btn sp-btn-secondary" onclick="openEmailTestModal(activeEmailEvent)">
                         <i class="fa fa-paper-plane"></i> Send Test
                     </button>
-                    <button class="sp-btn sp-btn-primary" onclick="saveSmsTemplate()">
+                    <button class="sp-btn sp-btn-primary" onclick="saveEmailTemplateFor(activeEmailEvent)">
                         <i class="fa fa-save"></i> Save Template
                     </button>
                 </div>
@@ -1060,7 +1060,7 @@
 
 
             {{-- ══════════════════════════════════════
-            EMAIL CHANNEL PANEL — unchanged
+            EMAIL CHANNEL PANEL
             ══════════════════════════════════════ --}}
             <div class="sp-channel-panel active" id="panel-email">
                 <div class="sp-tpl-layout">
@@ -1112,6 +1112,7 @@
                                     ? $tpl->statusBadgeHtml()
                                     : '<span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--bg);color:var(--text-hint);border:1px solid var(--border)">Off</span>';
                                 $isAdmin = ($m['audience'] === 'admin');
+                                $adminEmailValue = $extra['admin_email'] ?? ($smtpSettings?->from_email ?? '');
                             @endphp
 
                             <div class="sp-panel email-event-panel" id="email-panel-{{ $evKey }}"
@@ -1135,27 +1136,8 @@
                                     @if($isAdmin)
                                         <div class="sp-callout info" style="margin-bottom:20px">
                                             <i class="fa fa-shield-alt"></i>
-                                            <span>This is an <strong>admin-only</strong> notification. It is sent to the store
-                                                admin email, not to customers.</span>
-                                        </div>
-                                    @endif
-
-                                    {{-- Promotional warning --}}
-                                    @if($evKey === 'coupon')
-                                        <div class="sp-callout warn">
-                                            <i class="fa fa-exclamation-triangle"></i>
-                                            <span>Promotional emails require a valid unsubscribe link and must comply with
-                                                anti-spam laws (CAN-SPAM / GDPR). Ensure customer consent before
-                                                enabling.</span>
-                                        </div>
-                                    @endif
-
-                                    {{-- Password reset security notice --}}
-                                    @if($evKey === 'password-reset')
-                                        <div class="sp-callout warn">
-                                            <i class="fa fa-exclamation-triangle"></i>
-                                            <span>Security-critical email. Ensure the reset link uses a short-lived token (max
-                                                15 min). Never include the password in the body.</span>
+                                            <span>This is an <strong>admin-only</strong> notification. It is sent to the
+                                                <strong>Admin Notification Email</strong> set below, not to customers.</span>
                                         </div>
                                     @endif
 
@@ -1212,6 +1194,16 @@
                                                 value="{{ old('cc', $cc) }}" placeholder="e.g. manager@store.com">
                                         </div>
                                     </div>
+
+                                    {{-- ── Event-specific extras: admin email (shown near the top, it decides who gets the mail) ── --}}
+                                    @if($m['extras'] === 'admin')
+                                        <div class="sp-field" style="margin-bottom:16px">
+                                            <label class="sp-label">Admin Notification Email <span class="sp-req">*</span></label>
+                                            <input type="email" class="sp-input" id="email-admin-email-{{ $evKey }}"
+                                                value="{{ $adminEmailValue }}" placeholder="admin@store.com">
+                                            <div class="sp-help">This alert is delivered to this address.</div>
+                                        </div>
+                                    @endif
 
                                     <hr class="sp-divider">
 
@@ -1294,10 +1286,9 @@
                                                 <div id="email-preview-from-{{ $evKey }}">
                                                     <span>From:</span>
                                                     <span>{{ $fromName ?: ($smtpSettings?->from_name ?? 'Store') }}
-                                                        &lt;{{ $fromEmail ?: ($smtpSettings?->from_email ??
-                                                        'noreply@store.com') }}&gt;</span>
+                                                        &lt;{{ $fromEmail ?: ($smtpSettings?->from_email ?? 'noreply@store.com') }}&gt;</span>
                                                 </div>
-                                                <div><span>To:</span><span>customer@example.com</span></div>
+                                                <div><span>To:</span><span>{{ $isAdmin ? ($adminEmailValue ?: 'admin@store.com') : 'customer@example.com' }}</span></div>
                                                 <div id="email-preview-subject-{{ $evKey }}">
                                                     <span>Sub:</span><span>{{ $subject }}</span>
                                                 </div>
@@ -1319,24 +1310,13 @@
                                         </div>
                                     @endif
 
-                                    @if($m['extras'] === 'admin')
+                                    @if($evKey === 'low-stock-alert')
                                         <hr class="sp-divider">
-                                        <div class="sp-grid-2">
-                                            <div class="sp-field" style="margin:0">
-                                                <label class="sp-label">Admin Notification Email</label>
-                                                <input type="email" class="sp-input" id="email-admin-email-{{ $evKey }}"
-                                                    value="{{ $extra['admin_email'] ?? ($smtpSettings?->from_email ?? '') }}"
-                                                    placeholder="admin@store.com">
-                                                <div class="sp-help">Override the default admin email for this alert</div>
-                                            </div>
-                                            @if($evKey === 'low-stock-alert')
-                                                <div class="sp-field" style="margin:0">
-                                                    <label class="sp-label">Stock Threshold</label>
-                                                    <input type="number" class="sp-input" id="email-stock-threshold-{{ $evKey }}"
-                                                        value="{{ $extra['stock_threshold'] ?? 5 }}" min="1">
-                                                    <div class="sp-help">Alert when stock falls below this number</div>
-                                                </div>
-                                            @endif
+                                        <div class="sp-field" style="max-width:240px">
+                                            <label class="sp-label">Stock Threshold</label>
+                                            <input type="number" class="sp-input" id="email-stock-threshold-{{ $evKey }}"
+                                                value="{{ $extra['stock_threshold'] ?? 5 }}" min="1">
+                                            <div class="sp-help">Alert when stock falls below this number</div>
                                         </div>
                                     @endif
 
@@ -1381,7 +1361,8 @@
                     <div class="sp-modal-body">
                         <div class="sp-callout info">
                             <i class="fa fa-info-circle"></i>
-                            <span>Test emails use sample variable values. Actual customer data is not used.</span>
+                            <span>Test emails use sample variable values. Actual customer data is not used. Save the
+                                template first to test your latest changes.</span>
                         </div>
                         <input type="hidden" id="emailTestEventKey" value="">
                         <div class="sp-field">
@@ -1402,16 +1383,16 @@
             <div class="sp-action-bar">
                 <div class="sp-action-bar-left">
                     <i class="fa fa-info-circle"></i>
-                    Changes save per template. Switch tabs to edit other channels.
+                    Changes save per template. Switch events on the left to edit other templates.
                 </div>
                 <div class="sp-action-bar-right">
-                    <button class="sp-btn sp-btn-secondary" onclick="openTestModal()">
+                    <button class="sp-btn sp-btn-secondary" onclick="openEmailTestModal(activeEmailEvent)">
                         <i class="fa fa-paper-plane"></i> Send Test
                     </button>
                     <button class="sp-btn sp-btn-secondary" onclick="window.location.reload()">
-                        <i class="fa fa-history"></i> Reset to Default
+                        <i class="fa fa-history"></i> Discard Changes
                     </button>
-                    <button class="sp-btn sp-btn-primary" onclick="saveSmsTemplate()">
+                    <button class="sp-btn sp-btn-primary" onclick="saveEmailTemplateFor(activeEmailEvent)">
                         <i class="fa fa-save"></i> Save Template
                     </button>
                 </div>
@@ -1421,9 +1402,14 @@
     </div>
 </div>
 
-
-
 @include('admin.footer')
+
+@php
+    $sampleGeneral = $general ?? new \App\Models\Setting();
+    $sampleStore = $sampleGeneral->site_name ?: 'The Darwaaza';
+    $samplePhone = trim(explode(',', (string) $sampleGeneral->phone)[0] ?? '');
+    $sampleSupportEmail = $sampleGeneral->support_email ?: $sampleGeneral->admin_email;
+@endphp
 
 <script>
 
@@ -1435,141 +1421,31 @@
         document.getElementById('panel-' + ch).classList.add('active');
     }
 
-    /* ── Email template switcher (unchanged) ── */
-    let activeEmailPanel = 'email-welcome';
-    function switchEmailTemplate(key, navItem) {
-        document.querySelectorAll('#panel-email .sp-sidenav-item').forEach(i => i.classList.remove('active'));
-        navItem.classList.add('active');
-        document.getElementById(activeEmailPanel).style.display = 'none';
-        activeEmailPanel = 'email-' + key;
-        document.getElementById(activeEmailPanel).style.display = 'block';
-    }
-
-
-    /* ════════════════════════════════════════════════
-       EMAIL TEMPLATE JS  — mirrors SMS JS exactly
-    ════════════════════════════════════════════════ */
     const APP_URL = window.location.origin;
 
+    /* Sample values for live preview. Keys must match EmailTemplate::eventMeta() vars. */
     const EMAIL_SAMPLE = {
         '{customer_name}': 'Rahul Sharma',
-        '{email}': 'rahul@example.com',
+        '{customer_email}': 'rahul@example.com',
+        '{customer_phone}': '+91 98765 43210',
+        '{enquiry_type}': 'Product Enquiry',
+        '{product_name}': 'Designer Membrane Door',
+        '{subject}': 'Price for 10 doors',
+        '{message}': 'Hello, please share the price and delivery time for 10 doors.<br>Thanks.',
+        '{enquiry_date}': new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
 
-        '{store_name}': 'Oudhyana Chikankaari Store',
-        '{brand_name}': 'Oudhyana Chikankaari',
-
-        '{logo_url}': APP_URL + '/assets/images/logo.png',
-        '{tagline}': 'Handcrafted, with heart.',
-
+        '{store_name}': @json($sampleStore),
+        '{logo_url}': APP_URL + '/assets/images/logo/logo.png',
         '{shop_url}': APP_URL,
-        '{login_url}': APP_URL + '/user/login',
 
-        '{support_email}': 'support@oudhyana.com',
-        '{support_number}': '+91 0000000000',
+        '{support_number}': @json($samplePhone),
+        '{support_email}': @json($sampleSupportEmail),
 
-        '{order_number}': 'ORD-1089',
-        '{order_date}': '24 Jun 2026',
-        '{shipped_date}': '26 Jun 2026',
-        '{delivered_date}': '28 Jun 2026',
-        '{grand_total}': '₹3,450',
-        '{item_count}': '3',
-
-        '{payment_method}': 'UPI',
-        '{payment_status}': 'Paid',
-        '{payment_amount}': '₹3,450',
-        '{transaction_id}': 'TXN8472910',
-
-        '{courier_name}': 'Delhivery',
-        '{tracking_number}': 'DEL123456789',
-        '{tracking_url}': APP_URL + '/track/1089',
-        '{expected_delivery}': '28 Jun 2026',
-
-        '{cancel_reason}': 'Out of stock',
-        '{refund_amount}': '₹3,450',
-        '{refund_days}': '5-7',
-        '{order_items}': `
-    <div style="display:table;width:100%;border-bottom:1px solid #e6eae9;padding:14px 0;">
-        <div style="display:table-cell;width:60px;vertical-align:middle;padding-right:14px;">
-            <span style="display:block;width:56px;height:56px;background:#e8efee;border-radius:4px;border:1px solid #d0d8d7;"></span>
-        </div>
-        <div style="display:table-cell;vertical-align:middle;">
-            <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:3px;">Sample Product</div>
-            <div style="font-size:11px;color:#7a9e9c;">Qty: 1</div>
-        </div>
-        <div style="display:table-cell;vertical-align:middle;text-align:right;font-size:14px;font-weight:700;color:#1F5552;white-space:nowrap;">
-            ₹ 3,450.00
-        </div>
-    </div>
-    <div style="display:table;width:100%;border-bottom:1px solid #e6eae9;padding:14px 0;">
-        <div style="display:table-cell;width:60px;vertical-align:middle;padding-right:14px;">
-            <span style="display:block;width:56px;height:56px;background:#e8efee;border-radius:4px;border:1px solid #d0d8d7;"></span>
-        </div>
-        <div style="display:table-cell;vertical-align:middle;">
-            <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:3px;">Another Sample Item</div>
-            <div style="font-size:11px;color:#7a9e9c;">Qty: 2</div>
-        </div>
-        <div style="display:table-cell;vertical-align:middle;text-align:right;font-size:14px;font-weight:700;color:#1F5552;white-space:nowrap;">
-            ₹ 1,200.00
-        </div>
-    </div>
-`,
-        '{order_summary}': `
-    <div style="margin-top:16px;">
-        <div style="display:table;width:100%;padding:5px 0;">
-            <span style="display:table-cell;font-size:13px;color:#666;">Subtotal</span>
-            <span style="display:table-cell;text-align:right;font-size:13px;color:#333;">₹ 4,650.00</span>
-        </div>
-        <div style="display:table;width:100%;padding:5px 0;">
-            <span style="display:table-cell;font-size:13px;color:#2e7d32;font-weight:500;">Discount (SAVE20)</span>
-            <span style="display:table-cell;text-align:right;font-size:13px;color:#2e7d32;font-weight:500;">− ₹ 200.00</span>
-        </div>
-        <div style="display:table;width:100%;padding:5px 0;">
-            <span style="display:table-cell;font-size:13px;color:#666;">CGST (9%)</span>
-            <span style="display:table-cell;text-align:right;font-size:13px;color:#333;">₹ 200.25</span>
-        </div>
-        <div style="display:table;width:100%;padding:5px 0;">
-            <span style="display:table-cell;font-size:13px;color:#666;">SGST (9%)</span>
-            <span style="display:table-cell;text-align:right;font-size:13px;color:#333;">₹ 200.25</span>
-        </div>
-        <hr style="border:none;border-top:1px solid #d4dbd9;margin:10px 0;">
-        <div style="display:table;width:100%;padding:5px 0;">
-            <span style="display:table-cell;font-size:15px;font-weight:600;color:#1a1a1a;">Grand Total</span>
-            <span style="display:table-cell;text-align:right;font-size:16px;font-weight:700;color:#1F5552;">₹ 4,850.50</span>
-        </div>
-    </div>
-`,
-        '{shipping_address}': '<div>Rahul Sharma<br>221B Baker Street<br>Lucknow, UP - 226001</div>',
-
-        '{order_url}': APP_URL + '/user/orders/1089',
-        '{review_url}': APP_URL + '/user/orders/1089',
-        '{return_url}': APP_URL + '/user/orders/1089',
-        '{invoice_url}': APP_URL + '/user/orders/1089/invoice',
-
-        '{coupon_code}': 'SAVE20',
-        '{discount_value}': '₹200',
-        '{expiry_date}': '30 Jun 2026',
-        '{store_url}': APP_URL,
-
-        '{otp}': '847291',
-        '{otp_expiry}': '10',
-
-        '{admin_order_url}': APP_URL + '/admin/orders/1089',
-
-        '{report_date}': 'Tue, 30 Jun 2026 — 4:30 PM',
-        '{total_count}': '5',
-        '{critical_count}': '2',
-        '{low_count}': '3',
-        '{critical_threshold}': '2',
-        '{low_threshold}': '5',
-
-        '{critical_products}': '<div style="color:#b22222;font-weight:700">🔴 Sample critical product</div>',
-        '{low_products}': '<div style="color:#916a00;font-weight:700">🟡 Sample low-stock product</div>',
-
-        '{admin_stock_url}': APP_URL + '/admin/stock-alerts',
+        '{admin_enquiry_url}': APP_URL + '/admin/contact-enquiries',
     };
 
     /* ── Email nav switcher ── */
-    let activeEmailEvent = '{{ \App\Models\EmailTemplate::$eventKeys[0] }}';
+    let activeEmailEvent = @json(\App\Models\EmailTemplate::$eventKeys[0]);
 
     function switchEmailTemplate(evKey, navItem) {
         document.querySelectorAll('#panel-email .sp-sidenav-item').forEach(i => i.classList.remove('active'));
@@ -1595,11 +1471,7 @@
     function applyEmailSamples(text) {
         Object.keys(EMAIL_SAMPLE).forEach(k => {
             const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            // Negative lookbehind: skip matches immediately inside ="..."
-            const regex = new RegExp('(="[^"]*?)?' + escaped, 'g');
-            text = text.replace(regex, (match, inAttr) => {
-                return inAttr ? match.replace(k, EMAIL_SAMPLE[k]) : EMAIL_SAMPLE[k];
-            });
+            text = text.replace(new RegExp(escaped, 'g'), EMAIL_SAMPLE[k]);
         });
         return text;
     }
@@ -1620,7 +1492,11 @@
         const subjectInput = document.getElementById('email-subject-' + evKey);
         const subjectEl = document.getElementById('email-preview-subject-' + evKey);
         if (subjectInput && subjectEl) {
-            subjectEl.innerHTML = '<span>Sub:</span><span>' + applyEmailSamples(subjectInput.value) + '</span>';
+            // subject is plain text, so strip any markup the samples contain
+            const tmp = document.createElement('div');
+            tmp.innerHTML = applyEmailSamples(subjectInput.value);
+            subjectEl.innerHTML = '<span>Sub:</span><span></span>';
+            subjectEl.lastElementChild.textContent = tmp.textContent;
         }
     }
 
@@ -1670,10 +1546,18 @@
 
         fetch(`{{ url('admin/settings/email-templates') }}/${evKey}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
             body: JSON.stringify(payload),
         })
-            .then(r => r.json())
+            .then(async r => {
+                const data = await r.json();
+                // Laravel validation errors come back as 422 with an "errors" object
+                if (!r.ok && data.errors) {
+                    data.success = false;
+                    data.message = Object.values(data.errors).flat().join('\n');
+                }
+                return data;
+            })
             .then(data => {
                 if (data.success) {
                     if (note) note.innerHTML = '<i class="fa fa-check-circle" style="color:var(--green)"></i> <span style="color:var(--green)">Saved</span>';
@@ -1728,7 +1612,7 @@
 
         fetch('{{ route('admin.settings.email-templates.test') }}', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
             body: JSON.stringify({ event_key: evKey, email }),
         })
             .then(r => r.json())
@@ -1750,5 +1634,5 @@
             updateEmailPreview('{{ $evKey }}');
             updateEmailPreviewHeader('{{ $evKey }}');
         @endforeach
-});
+    });
 </script>

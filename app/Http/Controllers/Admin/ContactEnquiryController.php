@@ -12,7 +12,7 @@ class ContactEnquiryController extends Controller
 {
     public function index()
     {
-        $enquiries = ContactEnquiry::latest()->paginate(10);
+        $enquiries = ContactEnquiry::with('product')->latest()->paginate(10);
         $unreadCount = ContactEnquiry::where('is_read', false)->count();
 
         return view('admin.contact-enquiries.index', compact('enquiries', 'unreadCount'));
@@ -23,6 +23,8 @@ class ContactEnquiryController extends Controller
         if (! $contactEnquiry->is_read) {
             $contactEnquiry->update(['is_read' => true]);
         }
+
+        $contactEnquiry->load('product');
 
         return view('admin.contact-enquiries.show', ['enquiry' => $contactEnquiry]);
     }

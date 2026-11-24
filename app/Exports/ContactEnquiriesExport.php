@@ -16,12 +16,12 @@ class ContactEnquiriesExport implements FromCollection, WithHeadings, WithMappin
 
     public function collection()
     {
-        return ContactEnquiry::orderBy('created_at', 'desc')->get();
+        return ContactEnquiry::with('product')->orderBy('created_at', 'desc')->get();
     }
 
     public function headings(): array
     {
-        return ['#', 'Name', 'Email', 'Phone', 'Enquiry Type', 'Message', 'Status', 'Date'];
+        return ['#', 'Name', 'Email', 'Phone', 'Product', 'Enquiry Type', 'Message', 'Status', 'Date'];
     }
 
     public function map($item): array
@@ -31,6 +31,7 @@ class ContactEnquiriesExport implements FromCollection, WithHeadings, WithMappin
             $item->name,
             $item->email,
             $item->phone,
+            $item->product ? ($item->product->name ?: 'Product #' . $item->product->id) : '—',
             $item->type ?: '—',
             $item->message,
             $item->is_read ? 'Read' : 'New',

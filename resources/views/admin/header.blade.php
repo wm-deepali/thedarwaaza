@@ -32,6 +32,15 @@
 
 <!-- fixed-top-->
 
+@php
+    // admin-setting page is shared by General / SMTP / Tracking tabs
+    $settingTab     = request('tab', 'general');
+
+    $marketingActive = request()->routeIs('admin.seo.*', 'admin.redirect-settings.*');
+    $settingsActive  = request()->routeIs('admin.settings.*', 'admin.security.*')
+                        || (request()->routeIs('admin.admin-setting.*'));
+@endphp
+
 <div id='cssmenu'>
     <ul class="pt-0">
 
@@ -42,58 +51,50 @@
             </a>
         </li>
 
-        {{-- MASTER --}}
-        <li class="{{ request()->routeIs(
-    'admin.categories.*',
-) ? 'active' : '' }}">
-
-            <a href="#"><i class="fa-solid fa-layer-group"></i> Master</a>
+        {{-- CATALOG --}}
+        <li class="{{ request()->routeIs('admin.categories.*', 'admin.products.*') ? 'active' : '' }}">
+            <a href="#"><i class="fa-solid fa-boxes-stacked"></i> Catalog</a>
             <ul>
                 <li><a href="{{ route('admin.categories.index') }}">Categories & Sub Categories</a></li>
-                 <li><a href="{{ route('admin.products.index') }}">Manage Products</a></li>
+                <li><a href="{{ route('admin.products.index') }}">Manage Products</a></li>
             </ul>
         </li>
 
-
         {{-- ENQUIRIES --}}
-        <li class="{{ request()->routeIs(
-    'admin.contact-enquiries.*',
-) ? 'active' : '' }}">
+        <li class="{{ request()->routeIs('admin.contact-enquiries.*') ? 'active' : '' }}">
             <a href="#"><i class="fa-solid fa-envelope"></i> Enquiries</a>
             <ul>
                 <li><a href="{{ route('admin.contact-enquiries.index') }}">Contact Us Enquiries</a></li>
             </ul>
         </li>
 
-        {{-- MARKETING & SETTINGS --}}
-        <li class="{{ request()->routeIs(
-    'admin.seo.*',
-) ? 'active' : '' }}">
-            <a href="#"><i class="fa-solid fa-gear"></i> Marketing & Settings</a>
+        {{-- WEBSITE CONTENT --}}
+        <li class="{{ request()->routeIs('admin.contact-locations.*') ? 'active' : '' }}">
+            <a href="#"><i class="fa-solid fa-globe"></i> Website Content</a>
             <ul>
-                <li><a href="{{ route('admin.seo.index') }}">SEO Management</a></li>
+                <li><a href="{{ route('admin.contact-locations.index') }}">Contact Addresses</a></li>
             </ul>
         </li>
 
-
-        {{-- Admin Setting --}}
-        <li class="{{ request()->routeIs(
-    'admin.settings.*',
-    'admin.notifications.index',
-    'admin.security.*'
-) ? 'active' : '' }}">
-            <a href="#"><i class="fa-solid fa-gear"></i> Settings</a>
+        {{-- SEO & MARKETING --}}
+        <li class="{{ $marketingActive ? 'active' : '' }}">
+            <a href="#"><i class="fa-solid fa-bullhorn"></i> SEO & Marketing</a>
             <ul>
-
-                <li><a href="{{ route('admin.admin-setting.index', ['tab' => 'general']) }}">General Setting</a></li>
-                <li><a href="{{ route('admin.admin-setting.index', ['tab' => 'smtp']) }}">SMTP</a></li>
-                <li><a href="{{ route('admin.settings.email-templates.index') }}">Email Template Settings</a></li>
-                <li><a href="{{ route('admin.admin-setting.index', ['tab' => 'tracking']) }}">Tracking & Pixels</a></li>
-                <li><a href="{{ route('admin.security.system-logs') }}">System Logs</a></li>
+                <li><a href="{{ route('admin.seo.index') }}">SEO Management</a></li>
                 <li><a href="{{ route('admin.redirect-settings.index') }}">Re-Direction Setting</a></li>
             </ul>
         </li>
 
+        {{-- SETTINGS --}}
+        <li class="{{ $settingsActive ? 'active' : '' }}">
+            <a href="#"><i class="fa-solid fa-gear"></i> Settings</a>
+            <ul>
+                <li><a href="{{ route('admin.admin-setting.index', ['tab' => 'general']) }}">General Setting</a></li>
+                <li><a href="{{ route('admin.admin-setting.index', ['tab' => 'smtp']) }}">SMTP</a></li>
+                <li><a href="{{ route('admin.settings.email-templates.index') }}">Email Template Settings</a></li>
+                <li><a href="{{ route('admin.security.system-logs') }}">System Logs</a></li>
+            </ul>
+        </li>
 
     </ul>
 </div>

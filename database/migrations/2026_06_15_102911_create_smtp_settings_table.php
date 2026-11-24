@@ -28,16 +28,8 @@ return new class extends Migration {
             $table->string('reply_to_name')->nullable();
             $table->string('reply_to_email')->nullable();
 
-            $table->boolean('order_confirmation')->default(true);
-            $table->boolean('order_shipped')->default(true);
-            $table->boolean('order_delivered')->default(true);
-            $table->boolean('order_cancelled')->default(true);
-            $table->boolean('payment_received')->default(true);
-            $table->boolean('coupon')->default(false);
-            $table->boolean('welcome')->default(true);
-            $table->boolean('password_reset')->default(true);
-            $table->boolean('new_order_alert')->default(true);
-            $table->boolean('low_stock_alert')->default(false);
+            $table->boolean('enquiry_admin')->default(true);
+            $table->boolean('enquiry_customer')->default(true);
 
 
             $table->timestamps();

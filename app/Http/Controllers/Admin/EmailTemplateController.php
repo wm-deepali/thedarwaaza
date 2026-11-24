@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\EmailTemplate;
+use App\Models\Setting;
 use App\Models\SmtpSetting;
 use App\Services\Email\EmailDispatcher;
 use Illuminate\Http\Request;
 
 class EmailTemplateController extends Controller
 {
-
     public function index()
     {
         $emailData = self::getData();
@@ -19,10 +19,7 @@ class EmailTemplateController extends Controller
     }
 
     /**
-     * The blade is shared with SMS templates — this just
-     * supplies the $emailTemplates and $emailMeta variables.
-     * The view is loaded by whatever controller already renders
-     * the message-templates page; call getData() from there.
+     * Supplies $emailTemplates, $emailMeta and $smtpSettings to the templates blade.
      */
     public static function getData(): array
     {
@@ -67,14 +64,20 @@ class EmailTemplateController extends Controller
 
         // Build extra_settings for event-specific extras
         $extras = [];
+
         if ($eventKey === 'password-reset' && isset($validated['expiry_minutes'])) {
             $extras['expiry_minutes'] = $validated['expiry_minutes'];
         }
-        if (in_array($eventKey, ['new-order-alert', 'low-stock-alert'])) {
-            if (isset($validated['admin_email']))
+
+        // Admin-audience events: the admin email override lives here
+        if (in_array($eventKey, ['enquiry-admin', 'new-order-alert', 'low-stock-alert'])) {
+            if (isset($validated['admin_email'])) {
                 $extras['admin_email'] = $validated['admin_email'];
-            if (isset($validated['stock_threshold']))
-                $extras['stock_threshold'] = $validated['stock_threshold'];
+            }
+        }
+
+        if ($eventKey === 'low-stock-alert' && isset($validated['stock_threshold'])) {
+            $extras['stock_threshold'] = $validated['stock_threshold'];
         }
 
         $template = EmailTemplate::firstOrNew(['event_key' => $eventKey]);
@@ -111,118 +114,37 @@ class EmailTemplateController extends Controller
         $eventKey = $request->input('event_key');
         $email = $request->input('email');
 
-        // Sample variables — same pattern as SMS_SAMPLE in JS
-        // Sample variables — matches EmailTemplate::eventMeta() vars exactly
+        if (!in_array($eventKey, EmailTemplate::$eventKeys)) {
+            return response()->json(['success' => false, 'message' => 'Invalid event key.'], 422);
+        }
+
+        // Store details come from settings, not hardcoded
+        $general = Setting::first() ?? new Setting();
         $appUrl = url('/');
 
+        $firstPhone = trim(explode(',', (string) $general->phone)[0] ?? '');
+        $supportEmail = $general->support_email ?: $general->admin_email;
+
+        // Sample variables — must match EmailTemplate::eventMeta() vars.
+        // {message} is HTML (nl2br + escaped), same way the real send will build it.
         $samples = [
-            // Customer
-            '{customer_name}' => 'Rahul Sharma',
-            '{email}' => $email,
+            '{customer_name}'  => 'Rahul Sharma',
+            '{customer_email}' => $email,
+            '{customer_phone}' => '+91 98765 43210',
+            '{enquiry_type}'   => 'Product Enquiry',
+            '{product_name}'   => 'Designer Membrane Door',
+            '{subject}'        => 'Price for 10 doors',
+            '{message}'        => nl2br(e("Hello, please share the price and delivery time for 10 doors.\nThanks.")),
+            '{enquiry_date}'   => now()->format('d M Y, h:i A'),
 
-            // Store (global)
-            '{store_name}' => 'Oudhyana Chikankaari Store',
-            '{brand_name}' => 'Oudhyana Chikankaari',
-            '{logo_url}' => $appUrl .'/assets/images/logo.png',
-            '{tagline}' => 'Handcrafted, with heart.',
-            '{shop_url}' => $appUrl, 
-            '{login_url}' => $appUrl . '/user/login',
+            '{store_name}'     => $general->site_name ?: 'The Darwaaza',
+            '{logo_url}'       => $appUrl . '/assets/images/logo/logo.png',
+            '{shop_url}'       => $appUrl,
 
-            // Support (global)
-            '{support_email}' => 'support@oudhyana.com',
-            '{support_number}' => '+91 0000000000',
+            '{support_number}' => $firstPhone,
+            '{support_email}'  => $supportEmail,
 
-            // Order
-            '{order_number}' => 'ORD-1089',
-            '{order_date}' => '24 Jun 2026',
-            '{shipped_date}' => '26 Jun 2026',
-            '{delivered_date}' => '28 Jun 2026',
-            '{grand_total}' => '₹3,450',
-            '{item_count}' => '3',
-
-            // Payment
-            '{payment_method}' => 'UPI',
-            '{payment_status}' => 'Paid',
-            '{payment_amount}' => '₹3,450',
-            '{transaction_id}' => 'TXN8472910',
-
-            // Shipment
-            '{courier_name}' => 'Delhivery',
-            '{tracking_number}' => 'DEL123456789',
-            '{tracking_url}' => $appUrl . '/track/1089',
-            '{expected_delivery}' => '28 Jun 2026',
-
-            // Cancellation / Refund
-            '{cancel_reason}' => 'Out of stock',
-            '{refund_amount}' => '₹3,450',
-            '{refund_days}' => '5-7',
-
-            // Smart HTML blocks
-            '{order_items}' => '
-    <div style="display:table;width:100%;border-bottom:1px solid #e6eae9;padding:14px 0;">
-        <div style="display:table-cell;width:60px;vertical-align:middle;padding-right:14px;">
-            <span style="display:block;width:56px;height:56px;background:#e8efee;border-radius:4px;border:1px solid #d0d8d7;"></span>
-        </div>
-        <div style="display:table-cell;vertical-align:middle;">
-            <div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:3px;">Sample Product</div>
-            <div style="font-size:11px;color:#7a9e9c;">Qty: 1</div>
-        </div>
-        <div style="display:table-cell;vertical-align:middle;text-align:right;font-size:14px;font-weight:700;color:#1F5552;white-space:nowrap;">
-            ₹ 3,450.00
-        </div>
-    </div>
-',
-
-            '{order_summary}' => '
-    <div style="margin-top:16px;">
-        <div style="display:table;width:100%;padding:5px 0;">
-            <span style="display:table-cell;font-size:13px;color:#666;">Subtotal</span>
-            <span style="display:table-cell;text-align:right;font-size:13px;color:#333;">₹ 3,450.00</span>
-        </div>
-        <hr style="border:none;border-top:1px solid #d4dbd9;margin:10px 0;">
-        <div style="display:table;width:100%;padding:5px 0;">
-            <span style="display:table-cell;font-size:15px;font-weight:600;color:#1a1a1a;">Grand Total</span>
-            <span style="display:table-cell;text-align:right;font-size:16px;font-weight:700;color:#1F5552;">₹ 3,450.00</span>
-        </div>
-    </div>
-',
-
-            '{shipping_address}' => '<div><strong>Rahul Sharma</strong><br>221B Baker Street<br>Lucknow, Uttar Pradesh - 226001<br>📞 +91-9876543210</div>',
-
-            // Actions
-            '{order_url}' => $appUrl . '/user/orders/1089',
-            '{review_url}' => $appUrl . '/user/orders/1089',
-            '{return_url}' => $appUrl . '/user/orders/1089',
-            '{invoice_url}' => $appUrl . '/user/orders/1089/invoice',
-
-            // Coupon
-            '{coupon_code}' => 'SAVE20',
-            '{discount_value}' => '₹200',
-            '{expiry_date}' => '30 Jun 2026',
-            '{store_url}' => $appUrl,
-
-            // Password reset (OTP)
-            '{otp}' => '847291',
-            '{otp_expiry}' => '10',
-
-            // Admin — new order alert
-            '{admin_order_url}' => $appUrl . '/admin/orders/1089',
-
-            // Admin — low stock digest
-            '{report_date}' => 'Tuesday, 30 June 2026 — 4:30 PM',
-            '{total_count}' => '5',
-            '{critical_count}' => '2',
-            '{low_count}' => '3',
-            '{critical_threshold}' => '2',
-            '{low_threshold}' => '5',
-
-            '{critical_products}' =>
-                '<div style="font-size:12px;font-weight:700;color:#b22222;margin:20px 0 10px">🔴 Out of Stock (≤ 2 units)</div><div>Sample critical product row</div>',
-
-            '{low_products}' =>
-                '<div style="font-size:12px;font-weight:700;color:#916a00;margin:20px 0 10px">🟡 Low Stock (≤ 5 units)</div><div>Sample low stock product row</div>',
-
-            '{admin_stock_url}' => $appUrl . '/admin/stock-alerts',
+            '{admin_enquiry_url}' => route('admin.contact-enquiries.index'),
         ];
 
         $result = EmailDispatcher::sendTest($eventKey, $email, $samples, 'Test Recipient');

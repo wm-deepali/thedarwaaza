@@ -1,9 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Jali in Lucknow, MDF Jali in Lucknow, WPC Jali in Lucknow, Hardware Filling in Lucknow, Sun Board in Lucknow | The Darwaaza')
+@php
+    $siteName = $general->site_name;
+@endphp
+
+@section('title', 'Jali in Lucknow, MDF Jali in Lucknow, WPC Jali in Lucknow, Hardware Filling in Lucknow, Sun Board in Lucknow' . ($siteName ? ' | ' . $siteName : ''))
 @section('meta_description', 'The Darwaaza is Leading Jali in Lucknow, MDF Jali in Lucknow, WPC Jali in Lucknow, Hardware Filling in Lucknow, Sun Board in Lucknow. Get Here door at best price')
 @section('meta_keywords', 'Jali in Lucknow, MDF Jali in Lucknow, WPC Jali in Lucknow, Hardware Filling in Lucknow, Sun Board in Lucknow')
-@section('canonical', 'https://thedarwaaza.com')
+@section('canonical', url('/'))
 
 @section('content')
 
@@ -24,13 +28,13 @@
                 </div>
             </div>
             <div class="item">
-                <img src="{{ asset('assets/images/slider/2.jpg') }}" alt="The Darwaaza">
+                <img src="{{ asset('assets/images/slider/2.jpg') }}" alt="{{ $siteName }}">
                 <div class="carousel-caption">
                     <h3>Old Ways Won't <br>Open New Door </h3>
                 </div>
             </div>
             <div class="item">
-                <img src="{{ asset('assets/images/slider/3.jpg') }}" alt="The Darwaaza">
+                <img src="{{ asset('assets/images/slider/3.jpg') }}" alt="{{ $siteName }}"> 
                 <div class="carousel-caption">
                     <h3> <br> </h3>
                 </div>
@@ -159,73 +163,38 @@
     </div>
 </section>
 
+@if($categories->isNotEmpty())
 <section id="wood-door">
     <div class="container">
         <h2>Our Products</h2>
-        <div class="row">
-            <div class="col-md-3">
-                <a href="{{ url('membrane-door-pro.html') }}">
-                    <div class="pro-sec">
-                        <img src="{{ asset('assets/images/product/door.jpg') }}" alt="Door">
-                        <div class="caption"><h1>Door</h1></div>
+
+        @foreach($categories->chunk(4) as $chunk)
+            <div class="row">
+                @if($chunk->count() < 4)
+                    <div class="coll-sent">
+                @endif
+
+                @foreach($chunk as $category)
+                    <div class="col-md-3">
+                        <a href="{{ url($category->slug) }}">
+                            <div class="pro-sec">
+                                @if($category->image_url)
+                                    <img src="{{ $category->image_url }}" alt="{{ $category->name }}">
+                                @endif
+                                <div class="caption"><h1>{{ $category->name }}</h1></div>
+                            </div>
+                        </a>
                     </div>
-                </a>
-            </div>
-            <div class="col-md-3">
-                <a href="{{ url('wpc.html') }}">
-                    <div class="pro-sec">
-                        <img src="{{ asset('assets/images/product/door-frames.jpg') }}" alt="Frames">
-                        <div class="caption"><h1>Frames</h1></div>
+                @endforeach
+
+                @if($chunk->count() < 4)
                     </div>
-                </a>
+                @endif
             </div>
-            <div class="col-md-3">
-                <a href="{{ url('ss.html') }}">
-                    <div class="pro-sec">
-                        <img src="{{ asset('assets/images/product/vanities.jpg') }}" alt="Vanities">
-                        <div class="caption"><h1>Vanities</h1></div>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-3">
-                <a href="{{ url('wooden-temple.html') }}">
-                    <div class="pro-sec">
-                        <img src="{{ asset('assets/images/product/temple.jpg') }}" alt="Temple">
-                        <div class="caption"><h1>Temple</h1></div>
-                    </div>
-                </a>
-            </div>
-        </div>
-        <div class="row">
-            <div class="coll-sent">
-                <div class="col-md-3">
-                    <a href="{{ url('ply-board.html') }}">
-                        <div class="pro-sec">
-                            <img src="{{ asset('assets/images/product/plywood.jpg') }}" alt="Ply">
-                            <div class="caption"><h1>ply</h1></div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-3">
-                    <a href="{{ url('jaali.html') }}">
-                        <div class="pro-sec">
-                            <img src="{{ asset('assets/images/product/jaali.jpg') }}" alt="Jaali">
-                            <div class="caption"><h1>Jaali</h1></div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-md-3">
-                    <a href="{{ url('shelf.html') }}">
-                        <div class="pro-sec">
-                            <img src="{{ asset('assets/images/product/shelf.jpg') }}" alt="Shelf">
-                            <div class="caption"><h1>Shelf</h1></div>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        </div>
+        @endforeach
     </div>
 </section>
+@endif
 
 <section id="brochure">
     <div class="container-fluid">
@@ -272,23 +241,41 @@
 <section class="contact-section" id="form-sec">
     <div class="container">
         <h2>Stay In Touch</h2>
-        <p>For fast service and unbeatable prices, fill out the request below and well get back to <br> you with quotes for available options. </p>
+        <p>For fast service and unbeatable prices, fill out the request below and we'll get back to <br> you with quotes for available options. </p>
+
         <div class="row coll-sent">
             <div class="column form-column col-md-8">
                 <div class="form-box default-form">
                     <div class="default-form">
-                        {{-- TODO: point this to your own route/controller (old action was a demo URL) --}}
-                        <form action="#" method="POST" class="home-contact-form contact-form select-form">
+
+                        @if(session('success'))
+                            <div class="alert alert-success">{{ session('success') }}</div>
+                        @endif
+
+                        @if($errors->any())
+                            <div class="alert alert-danger">
+                                <ul class="list-unstyled" style="margin:0;">
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+
+                        <form action="{{ route('enquiry.submit') }}" method="POST" class="home-contact-form contact-form select-form">
                             @csrf
+                            <input type="hidden" name="form_type" value="home">
+                            <input type="hidden" name="form_botcheck" value="">
+
                             <div class="row clearfix">
                                 <div class="form-group col-md-6 col-sm-6 col-xs-12">
-                                    <input type="text" name="username" value="{{ old('username') }}" placeholder="Your Name *" required>
+                                    <input type="text" name="form_name" value="{{ old('form_name') }}" placeholder="Your Name *" required>
                                 </div>
                                 <div class="form-group col-md-6 col-sm-6 col-xs-12">
-                                    <input type="email" name="email" value="{{ old('email') }}" placeholder="Your Mail *" required>
+                                    <input type="email" name="form_email" value="{{ old('form_email') }}" placeholder="Your Mail *" required>
                                 </div>
                                 <div class="form-group col-md-6 col-sm-6 col-xs-12">
-                                    <input type="text" name="phone" value="{{ old('phone') }}" placeholder="Phone Number">
+                                    <input type="text" name="form_phone" value="{{ old('form_phone') }}" placeholder="Phone Number">
                                 </div>
                                 <div class="form-group col-md-6 col-sm-6 col-xs-12">
                                     <button type="submit" class="thm-btn">submit</button>
@@ -303,3 +290,11 @@
 </section>
 
 @endsection
+
+@if(session('success') || $errors->any())
+    @push('scripts')
+        <script>
+            document.getElementById('form-sec')?.scrollIntoView({ behavior: 'smooth' });
+        </script>
+    @endpush
+@endif

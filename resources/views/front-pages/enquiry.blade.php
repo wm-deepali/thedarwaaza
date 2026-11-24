@@ -1,7 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Enquiry | The Darwaaza')
-@section('canonical', 'https://thedarwaaza.com/enquiry')
+@php
+    // controller se na aaye to bhi error na de
+    $product = $product ?? null;
+    $siteName = $general->site_name ?: 'The Darwaaza';
+@endphp
+
+@section('title', 'Enquiry | ' . $siteName)
+@section('canonical', url('/enquiry'))
 
 @section('content')
 
@@ -16,7 +22,7 @@
             <div class="pull-left">
                 <ul class="list-inline link-list">
                     <li><a href="{{ route('home') }}">Home</a></li>
-                    <li><a href="{{ route('enquiry') }}">enquiry Now</a></li>
+                    <li><a href="{{ route('enquiry') }}">Enquiry Now</a></li>
                 </ul>
             </div>
         </div>
@@ -35,9 +41,29 @@
                     </div>
                     <div class="form-box default-form">
                         <div class="default-form">
-                            {{-- TODO: point this to your own route/controller (old action was a demo URL) --}}
-                            <form id="contact_form" name="contact_form" class="home-contact-form contact-form select-form" action="#" method="POST">
+
+                            @if(session('success'))
+                                <div class="alert alert-success">{{ session('success') }}</div>
+                            @endif
+
+                            @if($errors->any())
+                                <div class="alert alert-danger">
+                                    <ul class="list-unstyled" style="margin:0;">
+                                        @foreach($errors->all() as $error)
+                                            <li>{{ $error }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+
+                            @if($product)
+                                <p><strong>Enquiring about:</strong> {{ $product->name ?: 'Selected product' }}</p>
+                            @endif
+
+                            <form id="contact_form" name="contact_form" class="home-contact-form contact-form select-form" action="{{ route('enquiry.submit') }}" method="POST">
                                 @csrf
+                                <input type="hidden" name="product_id" value="{{ old('product_id', $product?->id) }}">
+
                                 <div class="row clearfix">
                                     <div class="col-md-6 col-sm-6 col-xs-12">
                                         <div class="form-group">
@@ -56,7 +82,7 @@
                                     </div>
                                     <div class="col-md-6 col-sm-6 col-xs-12">
                                         <div class="form-group">
-                                            <input type="text" name="form_subject" value="{{ old('form_subject') }}" placeholder="Subject">
+                                            <input type="text" name="form_subject" value="{{ old('form_subject', $product?->name) }}" placeholder="Subject">
                                         </div>
                                     </div>
                                     <div class="col-md-12 col-sm-12 col-xs-12">
@@ -77,9 +103,11 @@
                 </div>
             </div>
 
-            <div class="col-md-6 col-sm-6 col-xs-12">
-                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3560.0614520483236!2d80.92167791504335!3d26.83799768315979!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x399bfdb44787aacb%3A0xb71b336be205a061!2sThe%20Hamam%20The%20Darwaaza!5e0!3m2!1sen!2sin!4v1677669256990!5m2!1sen!2sin" width="100%" height="510" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-            </div>
+            @if(filled($general->google_map_url))
+                <div class="col-md-6 col-sm-6 col-xs-12">
+                    <iframe src="{{ $general->google_map_url }}" width="100%" height="510" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
+            @endif
         </div>
     </div>
 </section>

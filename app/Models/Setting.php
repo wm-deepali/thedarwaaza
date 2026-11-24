@@ -34,17 +34,9 @@ class Setting extends Model
         'timezone',
         'maintenance_mode',
         'admin_session_timeout',
-        'product_reviews',
-        'wishlist',
-        'stock_alerts',
-        'cod_enabled'
     ];
 
     protected $casts = [
         'maintenance_mode' => 'boolean',
-        'product_reviews' => 'boolean',
-        'wishlist' => 'boolean',
-        'stock_alerts' => 'boolean',
-        'cod_enabled' => 'boolean',
     ];
 }

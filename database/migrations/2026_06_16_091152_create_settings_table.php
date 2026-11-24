@@ -31,7 +31,7 @@ return new class extends Migration {
             // Footer
             $table->text('footer_description')->nullable();
             $table->string('footer_copyright')->nullable();
-            $table->string('google_map_url')->nullable();
+            $table->longText('google_map_url')->nullable();
 
             // Social Links
             $table->string('facebook')->nullable();
@@ -49,10 +49,6 @@ return new class extends Migration {
             // Features
             $table->boolean('maintenance_mode')->default(false);
             $table->integer('admin_session_timeout')->default(60);
-            $table->boolean('product_reviews')->default(true);
-            $table->boolean('wishlist')->default(true);
-            $table->boolean('stock_alerts')->default(false);
-            $table->boolean('cod_enabled')->default(1);
 
             $table->timestamps();
         });

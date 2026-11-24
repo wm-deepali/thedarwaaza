@@ -18,18 +18,9 @@ class EmailDispatcher
      * Events absent from this map have no global toggle and go straight to Guard 2.
      */
     private static array $columnMap = [
-        'welcome' => 'welcome',
-        'order-confirmed' => 'order_confirmation',
-        'order-shipped' => 'order_shipped',
-        'order-delivered' => 'order_delivered',
-        'order-cancelled' => 'order_cancelled',
-        'payment-received' => 'payment_received',
-        'coupon' => 'coupon',
-        'password-reset' => 'password_reset',
-        'new-order-alert' => 'new_order_alert',
-        'low-stock-alert' => 'low_stock_alert',
+        'enquiry-admin'    => 'enquiry_admin',
+        'enquiry-customer' => 'enquiry_customer',
     ];
-
 
     private static function globalVariables(): array
     {
@@ -55,24 +46,25 @@ class EmailDispatcher
     }
 
     /**
-     * Auto-extract a reference (e.g. order number) from the variables
+     * Auto-extract a reference (order number / enquiry id) from the variables
      * passed to send(), if one is present. No call sites need to change.
      */
     private static function extractReference(array $variables): ?string
     {
-        return $variables['{order_number}'] ?? null;
+        $ref = $variables['{order_number}'] ?? $variables['{enquiry_id}'] ?? null;
+
+        return $ref !== null ? (string) $ref : null;
     }
 
     /**
      * Resolve, render, and send an email for a given event.
      *
-     * Guard 1 — SmtpSetting per-event toggle must be enabled.
+     * Guard 1 — SmtpSetting per-event toggle must be enabled (only for events in $columnMap).
      * Guard 2 — EmailTemplate row must exist and be enabled.
-     * Both must pass for the email to be sent.
      *
-     * @param  string       $eventKey   e.g. 'order-confirmed', 'welcome', 'password-reset'
+     * @param  string       $eventKey   e.g. 'enquiry-admin', 'enquiry-customer'
      * @param  string       $to         Recipient email address
-     * @param  array        $variables  e.g. ['{customer_name}' => 'Rahul', '{order_id}' => 'ORD-001']
+     * @param  array        $variables  e.g. ['{customer_name}' => 'Rahul']
      * @param  string|null  $toName     Recipient display name (optional)
      * @return array{success: bool, response: mixed}
      */
@@ -134,6 +126,7 @@ class EmailDispatcher
             self::globalVariables(),
             $variables
         );
+
         // ── Render: replace {variables} in subject and body ───────────────────
         $subject = str_replace(
             array_keys($variables),
@@ -214,10 +207,6 @@ class EmailDispatcher
      * Not logged to email_logs — test sends are ad-hoc admin actions,
      * not real customer-facing events.
      *
-     * @param  string       $eventKey
-     * @param  string       $to
-     * @param  array        $variables
-     * @param  string|null  $toName
      * @return array{success: bool, response: mixed}
      */
     public static function sendTest(string $eventKey, string $to, array $variables = [], ?string $toName = null): array
@@ -248,6 +237,7 @@ class EmailDispatcher
         $fromEmail = $template->from_email ?? $smtp->from_email ?? config('mail.from.address');
         $replyName = $template->reply_to_name ?? $smtp->reply_to_name ?? null;
         $replyEmail = $template->reply_to_email ?? $smtp->reply_to_email ?? null;
+
         MailHelper::configure();
 
         try {

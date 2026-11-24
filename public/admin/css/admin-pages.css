@@ -779,3 +779,177 @@
     flex-direction: column;
     gap: 8px;
 }
+
+/* ── Contact enquiries (extras) ─────────────────────────── */
+.btn-green,
+.btn-danger-dash {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #fff !important;
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none !important;
+    font-family: var(--font);
+    transition: opacity .15s;
+    white-space: nowrap;
+}
+
+.btn-green {
+    background: var(--green);
+    border: 1px solid var(--green);
+}
+
+.btn-danger-dash {
+    background: var(--red);
+    border: 1px solid var(--red);
+}
+
+.btn-green:hover,
+.btn-danger-dash:hover {
+    opacity: .88;
+}
+
+.bulk-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: var(--accent-light);
+    border-bottom: 1px solid rgba(48, 61, 137, .15);
+}
+
+.bulk-bar.visible {
+    display: flex;
+}
+
+.bulk-bar-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    flex: 1;
+}
+
+.row-check,
+.check-all {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+.data-table tbody tr.row-selected {
+    background: var(--accent-light);
+}
+
+.data-table tbody tr.is-unread {
+    background: #fffdf3;
+}
+
+.data-table tbody tr.is-unread .cust-name {
+    font-weight: 700;
+}
+
+.cust-cell {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.cust-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--accent-light);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+}
+
+.cust-name {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.cust-email {
+    font-size: 11.5px;
+    color: var(--text-hint);
+}
+
+.inq-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #fff5cc;
+    color: #916a00;
+    border: 1px solid rgba(145, 106, 0, .15);
+}
+
+.date-cell {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.pill-new,
+.pill-read {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+.pill-new {
+    background: #fff5cc;
+    color: #916a00;
+}
+
+.pill-read {
+    background: var(--bg);
+    color: var(--text-hint);
+    border: 1px solid var(--border);
+}
+
+.action-btn.view:hover {
+    background: #e8f2ff;
+    color: #0069d9;
+    border-color: rgba(0, 105, 217, .25);
+}
+
+/* product cell */
+.prod-cell {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.prod-cell .thumb,
+.prod-cell .thumb-placeholder {
+    width: 34px;
+    height: 34px;
+    font-size: 13px;
+}
+
+.prod-name {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.prod-id {
+    font-size: 11.5px;
+    color: var(--text-hint);
+}

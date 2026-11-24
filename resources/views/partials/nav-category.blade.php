@@ -5,7 +5,7 @@
 
 @if($children->isNotEmpty())
     <li class="dropdown">
-        <a href="{{ url($category->slug) }}">{{ $category->name }} <i class="fas fa-arrow-right m-h" aria-hidden="true"></i></a>
+        <a href="{{ route('category.show', $category->slug) }}">{{ $category->name }} <i class="fas fa-arrow-right m-h" aria-hidden="true"></i></a>
         <ul class="submenu {{ $children->count() > 8 ? 'sscrl' : '' }}">
             @foreach($children as $child)
                 @include('partials.nav-category', ['category' => $child, 'level' => $level + 1])
@@ -13,5 +13,5 @@
         </ul>
     </li>
 @else
-    <li><a href="{{ url($category->slug) }}">{{ $category->name }}</a></li>
+    <li><a href="{{ route('category.show', $category->slug) }}">{{ $category->name }}</a></li>
 @endif

@@ -9,10 +9,10 @@ use App\Http\Controllers\Admin\{
     SystemLogController,
     DashboardController,
     AdminSettingController,
-    NotificationController,
     EmailTemplateController,
     ProfileSettingController,
     ContactEnquiryController,
+    ContactLocationController
 };
 
 use Illuminate\Support\Facades\Route;
@@ -23,11 +23,14 @@ Route::middleware('maintenance.mode')->group(function () {
 
     Route::controller(FrontController::class)->group(function () {
         Route::get('/', 'home')->name('home');
-        Route::get('{slug}', 'categoryDetail')->where('slug', '[A-Za-z0-9\-]+')->name('category.show');
-        Route::view('/about', 'front-pages.about');
-        Route::view('/enquiry', 'front-pages.enquiry');
-        Route::view('/contact', 'front-pages.contact');
-        Route::view('/strength', 'front-pages.strength');
+
+        Route::view('/about', 'front-pages.about')->name('about');
+        Route::get('/enquiry', 'enquiry')->name('enquiry');
+        Route::post('/enquiry', 'enquirySubmit')->name('enquiry.submit');
+        Route::get('/contact', 'contact')->name('contact');
+        Route::view('/strength', 'front-pages.strength')->name('strength');
+
+        Route::get('category/{slug}', 'categoryDetail')->where('slug', '[A-Za-z0-9\-]+')->name('category.show');
     });
 
 });
@@ -51,21 +54,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('categories', CategoryController::class)->except(['show']);
         Route::resource('products', ProductController::class)->only(['index', 'store', 'update', 'destroy']);
 
+        Route::resource('contact-locations', ContactLocationController::class)->except(['show']);
+
         Route::get('contact-enquiries', [ContactEnquiryController::class, 'index'])->name('contact-enquiries.index');
         Route::get('contact-enquiries/export', [ContactEnquiryController::class, 'export'])->name('contact-enquiries.export');
         Route::delete('contact-enquiries/bulk-delete', [ContactEnquiryController::class, 'bulkDelete'])->name('contact-enquiries.bulk-delete');
         Route::get('contact-enquiries/{contact_enquiry}', [ContactEnquiryController::class, 'show'])->name('contact-enquiries.show');
         Route::delete('contact-enquiries/{contact_enquiry}', [ContactEnquiryController::class, 'destroy'])->name('contact-enquiries.destroy');
 
-        
         Route::get('/seo', [SeoController::class, 'index'])->name('seo.index');
         Route::put('/seo/{id}', [SeoController::class, 'update'])->name('seo.update');
-        
+
         // Admin Settings routes
         Route::get('/admin-setting', [AdminSettingController::class, 'index'])->name('admin-setting.index');
         Route::post('/smtp-settings/store', [AdminSettingController::class, 'smtpSettingStore'])->name('smtp-settings.store');
         Route::post('/settings/general', [AdminSettingController::class, 'generalSettingStore'])->name('settings.general.store');
-        Route::post('admin-setting/google-setting', [AdminSettingController::class, 'googleSettingStore'])->name('admin-setting.google-setting');
         Route::get('/security/system-logs', [SystemLogController::class, 'index'])->name('security.system-logs');
         Route::get('/settings/email-templates', [EmailTemplateController::class, 'index'])->name('settings.email-templates.index');
         Route::post('settings/email-templates/test', [EmailTemplateController::class, 'sendTest'])->name('settings.email-templates.test');

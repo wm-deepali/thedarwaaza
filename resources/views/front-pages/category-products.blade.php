@@ -1,10 +1,5 @@
 @extends('layouts.app')
 
-@section('title', $category->meta_title ?: $category->name . ' | The Darwaaza')
-@section('meta_description', $category->meta_description)
-@section('meta_keywords', $category->meta_keywords)
-@section('canonical', $category->canonical_url ?: url($category->slug))
-
 @section('content')
 
 <div class="inner-banner has-base-color-overlay text-center"
@@ -20,9 +15,9 @@
                 <ul class="list-inline link-list">
                     <li><a href="{{ url('/') }}">Home</a></li>
                     @foreach($category->ancestors() as $ancestor)
-                        <li><a href="{{ url($ancestor->slug) }}">{{ $ancestor->name }}</a></li>
+                        <li><a href="{{ route('category.show', $ancestor->slug) }}">{{ $ancestor->name }}</a></li>
                     @endforeach
-                    <li><a href="{{ url($category->slug) }}">{{ $category->name }}</a></li>
+                    <li><a href="{{ route('category.show', $category->slug) }}">{{ $category->name }}</a></li>
                 </ul>
             </div>
         </div>
@@ -37,11 +32,13 @@
                     <div class="col-md-3 mix col-sm-6 agricultural" style="display: inline-block;">
                         <article class="item">
                             <div class="inner-box">
-                                <figure class="image-box">
-                                    <img src="{{ $product->image_url }}" alt="{{ $product->name ?: $category->name }}" loading="lazy" />
-                                </figure>
+                                @if($product->image_url)
+                                    <figure class="image-box">
+                                        <img src="{{ $product->image_url }}" alt="{{ $product->name ?: $category->name }}" loading="lazy" />
+                                    </figure>
+                                @endif
                                 <!-- Overlay Box -->
-                                <a href="{{ route('enquiry') }}">
+                                <a href="{{ route('enquiry', ['product' => $product->id]) }}">
                                     <div class="overlay-one">
                                         <div class="overlay-inner">
                                             <div class="content">

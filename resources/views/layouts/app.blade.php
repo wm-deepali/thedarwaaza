@@ -1,16 +1,53 @@
+@php
+    use Illuminate\Support\Str;
+
+    // Uploaded file path -> public URL (full URL ho to jaisa hai waisa)
+    $img = function ($path) {
+        if (blank($path)) {
+            return null;
+        }
+        return Str::startsWith($path, ['http://', 'https://'])
+            ? $path
+            : asset('storage/' . ltrim($path, '/'));
+    };
+
+    $siteName   = $general->site_name ?: 'The Darwaaza';
+    $logoUrl    = $img($general->header_logo);
+    $footerLogo = $img($general->footer_logo);
+    $faviconUrl = $img($general->favicon);
+
+    $phones = collect(explode(',', (string) $general->phone))
+        ->map(fn ($p) => trim($p))
+        ->filter()
+        ->values();
+
+    $contactEmail = $general->support_email ?: $general->admin_email;
+
+    // WhatsApp: sirf digits, 10 digit ho to India code lagao
+    $waDigits = preg_replace('/\D/', '', (string) $general->whatsapp);
+    if (strlen($waDigits) === 10) {
+        $waDigits = '91' . $waDigits;
+    }
+    $hasWhatsapp = strlen($waDigits) >= 10;
+
+    $socials = [
+        'facebook'  => 'fa-facebook-f',
+        'instagram' => 'fa-instagram',
+        'pinterest' => 'fa-pinterest-p',
+        'twitter'   => 'fa-twitter',
+        'linkedin'  => 'fa-linkedin-in',
+        'youtube'   => 'fa-youtube',
+    ];
+@endphp
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <title>@yield('title', 'The Darwaaza')</title>
-    <meta name="description" content="@yield('meta_description')">
-    <meta name="keywords" content="@yield('meta_keywords')">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="@yield('canonical', url()->current())">
-
-    <!-- mobile responsive meta -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    {{-- Title, description, keywords, robots, canonical, OG, Twitter, JSON-LD, custom head scripts --}}
+    @include('partials.seo')
 
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZD6RGZPK8W"></script>
@@ -23,9 +60,10 @@
 
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/responsive.css') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('assets/images/favicons/apple-touch-icon.png') }}">
-    <link rel="icon" type="image/png" href="{{ asset('assets/images/favicons/favicon-32x32.png') }}" sizes="32x32">
-    <link rel="icon" type="image/png" href="{{ asset('assets/images/favicons/favicon-16x16.png') }}" sizes="16x16">
+    @if($faviconUrl)
+        <link rel="icon" href="{{ $faviconUrl }}">
+        <link rel="apple-touch-icon" href="{{ $faviconUrl }}">
+    @endif
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css"
         integrity="sha512-MV7K8+y+gLIBoVD59lQIYicR65iaqukzvf/nwasF0nqhPay5w/9lJmVM2hMDcnK1OnMGCdVK+iQrJ7lzPJQd1w=="
         crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -33,6 +71,10 @@
 </head>
 
 <body>
+    @if (!empty($seo?->body_scripts))
+        {!! $seo->body_scripts !!}
+    @endif
+
     <div class="boxed_wrapper">
 
         <header class="main-header">
@@ -66,10 +108,16 @@
                         </div>
                         <div class="col-md-4">
                             <ul class="social">
-                                <li><a href="https://www.facebook.com/TheDarwaaza?mibextid=ZbWKwL"><i
-                                            class="fa fa-facebook"></i></a></li>
-                                <li><a href="https://pin.it/2iNLhCj"><i class="fa fa-pinterest"></i></a></li>
-                                <li><a href="javascript:void(0);"><i class="fa fa-instagram"></i></a></li>
+                                @foreach($socials as $field => $icon)
+                                    @if(filled($general->{$field}))
+                                        <li>
+                                            <a href="{{ $general->{$field} }}" target="_blank" rel="noopener"
+                                                aria-label="{{ ucfirst($field) }}">
+                                                <i class="fa-brands {{ $icon }}"></i>
+                                            </a>
+                                        </li>
+                                    @endif
+                                @endforeach
                             </ul>
                             <a href="{{ route('enquiry') }}" class="enq-btn">Send Enquiry</a>
                         </div>
@@ -82,22 +130,26 @@
                     <div class="row">
                         <div class="col-md-3">
                             <div class="pull-left logo-outer">
-                                <div class="logo">
-                                    <a href="{{ url('/') }}">
-                                        <img src="{{ asset('assets/images/logo/logo.png') }}" alt="The Darwaaza"
-                                            title="The Darwaaza">
-                                    </a>
-                                </div>
+                                @if($logoUrl)
+                                    <div class="logo">
+                                        <a href="{{ url('/') }}">
+                                            <img src="{{ $logoUrl }}" alt="{{ $siteName }}" title="{{ $siteName }}">
+                                        </a>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                         <div class="col-md-4 marg">
-                            <div class="midd-header">
-                                <span>Have Questions? </span>
-                                <a href="https://api.whatsapp.com/send?phone=9696333549&amp;text=Hi" target="_blank">
-                                    <img src="{{ asset('assets/images/whatsapp.png') }}" alt="whatsapp" width="15%">
-                                    +91-9696333549
-                                </a>
-                            </div>
+                            @if($hasWhatsapp)
+                                <div class="midd-header">
+                                    <span>Have Questions? </span>
+                                    <a href="https://api.whatsapp.com/send?phone={{ $waDigits }}&amp;text=Hi"
+                                        target="_blank" rel="noopener">
+                                        <img src="{{ asset('assets/images/whatsapp.png') }}" alt="whatsapp" width="15%">
+                                        {{ $general->whatsapp }}
+                                    </a>
+                                </div>
+                            @endif
                         </div>
                         <div class="col-md-3 marg">
                             <div class="search-box">
@@ -159,12 +211,15 @@
                 <div class="row">
                     <div class="col-md-4">
                         <div class="inner-title">
-                            <h3>Our Solution</h3>
-                            <p>We're a Lucknow (Uttar Pradesh) based industry with two manufacturing units. We have
-                                already set our standards high from other retailers in the industry due to the strong
-                                commitment to the service we provide, we are one of the few retailers who are on top of
-                                their business, standing out from the others. We are still growing in this industry and
-                                want to become one of the largest retailers in the designer doors industry.</p>
+                            @if($footerLogo)
+                                <a href="{{ url('/') }}">
+                                    <img src="{{ $footerLogo }}" alt="{{ $siteName }}" style="max-width:180px;margin-bottom:12px">
+                                </a>
+                            @endif
+                            @if(filled($general->footer_description))
+                                <h3>Our Solution</h3>
+                                <p>{!! nl2br(e($general->footer_description)) !!}</p>
+                            @endif
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -176,7 +231,7 @@
                                 <li><i class="fas fa-arrow-right" aria-hidden="true"></i> <a
                                         href="{{ route('about') }}">About us</a></li>
                                 <li><i class="fas fa-arrow-right" aria-hidden="true"></i> <a
-                                        href="{{ asset('pdf/brouchure.pdf') }}" target="_blank">Brochure</a></li>
+                                        href="{{ asset('pdf/thedarwaaza.pdf') }}" target="_blank">Brochure</a></li>
                                 <li><i class="fas fa-arrow-right" aria-hidden="true"></i> <a
                                         href="{{ route('contact') }}">Contact us</a></li>
                                 <li><i class="fas fa-arrow-right" aria-hidden="true"></i> <a
@@ -191,7 +246,7 @@
                                 @foreach($navCategories as $navCategory)
                                     <li>
                                         <i class="fas fa-arrow-right" aria-hidden="true"></i>
-                                        <a href="{{ url($navCategory->slug) }}">{{ $navCategory->name }}</a>
+                                        <a href="{{ route('category.show', $navCategory->slug) }}">{{ $navCategory->name }}</a>
                                     </li>
                                 @endforeach
                             </ul>
@@ -201,64 +256,88 @@
                         <div class="inner-title add">
                             <h3>CONTACT US</h3>
                             <ul>
-                                <li>
-                                    <i class="fa fa-map-marker" aria-hidden="true"></i>
-                                    <span>Address: <br></span>
-                                    5/ 626 Gomtinagar Vistar Shaheed Path Near Sadar Tehsil Lucknow 226010
-                                </li>
-                                <li>
-                                    <i class="fa-solid fa-phone"></i>
-                                    <span>Mobile:- <br></span>
-                                    8423437500, 9696333549, 9415116688, 8858464795
-                                </li>
-                                <li>
-                                    <i class="fa-solid fa-envelope"></i>
-                                    <span>Email:- <br></span>
-                                    thehamam99@gmail.com
-                                </li>
+                                @if(filled($general->business_address))
+                                    <li>
+                                        <i class="fa fa-map-marker" aria-hidden="true"></i>
+                                        <span>Address: <br></span>
+                                        {!! nl2br(e($general->business_address)) !!}
+                                    </li>
+                                @endif
+
+                                @if($phones->isNotEmpty())
+                                    <li>
+                                        <i class="fa-solid fa-phone"></i>
+                                        <span>Mobile:- <br></span>
+                                        @foreach($phones as $phone)
+                                            <a href="tel:{{ preg_replace('/[^\d+]/', '', $phone) }}">{{ $phone }}</a>@if(!$loop->last), @endif
+                                        @endforeach
+                                    </li>
+                                @endif
+
+                                @if($contactEmail)
+                                    <li>
+                                        <i class="fa-solid fa-envelope"></i>
+                                        <span>Email:- <br></span>
+                                        <a href="mailto:{{ $contactEmail }}">{{ $contactEmail }}</a>
+                                    </li>
+                                @endif
+
+                                @if(filled($general->business_hours))
+                                    <li>
+                                        <i class="fa-regular fa-clock"></i>
+                                        <span>Business Hours:- <br></span>
+                                        {!! nl2br(e($general->business_hours)) !!}
+                                    </li>
+                                @endif
                             </ul>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="copy-text">
-                <p>Copyright © 2023 <strong>The Hamam Local</strong> | All Right Reserved |
+                <p>
+                    @if(filled($general->footer_copyright))
+                        {{ $general->footer_copyright }} |
+                    @endif
                     <a href="https://keywordindia.com/">Keyword India Network Pvt. Ltd.</a>
                 </p>
             </div>
         </footer>
 
-        <!-- Button trigger modal -->
-        <button type="button" class="popup-btn" data-toggle="modal" data-target="#exampleModal">
-            <img src="{{ asset('assets/images/doors_whatsapp.jpg') }}" alt="WhatsApp">
-        </button>
+        @if($hasWhatsapp)
+            <!-- Button trigger modal -->
+            <button type="button" class="popup-btn" data-toggle="modal" data-target="#exampleModal">
+                <img src="{{ asset('assets/images/doors_whatsapp.jpg') }}" alt="WhatsApp">
+            </button>
 
-        <!-- Modal -->
-        <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-body">
-                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                        <div class="popup-detail">
-                            <div class="popup-img">
-                                <img src="{{ asset('assets/images/popup.jpg') }}" alt="">
-                            </div>
-                            <div class="popup-text">
-                                <h2>Get More Design</h2>
-                                <p>Idea On Whats app</p>
-                                <a href="https://api.whatsapp.com/send?phone=+919696333549&text=Hi">
-                                    <i class="fa-brands fa-whatsapp"></i> Start chat
-                                </a>
-                                <span class="text-red blink-hard">We Are Online</span>
+            <!-- Modal -->
+            <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-body">
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            <div class="popup-detail">
+                                <div class="popup-img">
+                                    <img src="{{ asset('assets/images/popup.jpg') }}" alt="">
+                                </div>
+                                <div class="popup-text">
+                                    <h2>Get More Design</h2>
+                                    <p>Idea On Whats app</p>
+                                    <a href="https://api.whatsapp.com/send?phone={{ $waDigits }}&text=Hi"
+                                        target="_blank" rel="noopener">
+                                        <i class="fa-brands fa-whatsapp"></i> Start chat
+                                    </a>
+                                    <span class="text-red blink-hard">We Are Online</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        @endif
 
         <!-- Scroll Top Button -->
         <button class="scroll-top tran3s color2_bg">

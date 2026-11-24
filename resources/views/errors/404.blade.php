@@ -23,10 +23,6 @@
                             <i class="fa-solid fa-house" aria-hidden="true"></i> Back to
                             Home
                         </a>
-                        <a href="{{ route('products') }}" class="btn btn-outline-primary">
-                            <i class="fa-solid fa-bag-shopping" aria-hidden="true"></i> Shop
-                            Sarees
-                        </a>
                     </div>
                 </div>
             </div>

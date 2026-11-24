@@ -1,9 +1,9 @@
 @extends('layouts.app')
 
-@section('title', 'Contact | The Darwaaza')
-@section('meta_description', 'Contact | The Darwaaza')
-@section('meta_keywords', 'Contact | The Darwaaza')
-@section('canonical', 'https://thedarwaaza.com/contact')
+@section('title', 'Contact' . ($general->site_name ? ' | ' . $general->site_name : ''))
+@section('meta_description', 'Contact' . ($general->site_name ? ' | ' . $general->site_name : ''))
+@section('meta_keywords', 'Contact' . ($general->site_name ? ' | ' . $general->site_name : ''))
+@section('canonical', url('/contact'))
 
 @section('content')
 
@@ -37,30 +37,69 @@
                     <div class="accordion animated out" data-delay="0" data-animation="fadeInUp">
                         <div class="acc-content collapsed">
                             <ul class="contact-infos">
-                                <li>
-                                    <div class="icon_box"><i class="fa fa-map-marker"></i></div>
-                                    <div class="text-box">
-                                        <p><strong>Factory Address</strong><br>Auspicious Creations Pvt Ltd E-195, IIDC, Kursi Road Industrial Area, District- Barabanki, Uttar Pradesh, India.</p>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="icon_box"><i class="fa fa-map-marker"></i></div>
-                                    <div class="text-box">
-                                        <p><strong>Address:</strong><br>5/ 626 Gomtinagar Vistar Shaheed Path Near Sadar Tehsil Lucknow 226010</p>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="icon_box"><i class="fa-solid fa-envelope"></i></div>
-                                    <div class="text-box">
-                                        <p><strong>Email:-</strong><br>thehamam99@gmail.com</p>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="icon_box"><i class="fa-solid fa-phone"></i></div>
-                                    <div class="text-box">
-                                        <p><strong>Phone:-</strong><br>8423437500, 9696333549, 9415116688, 8858464795</p>
-                                    </div>
-                                </li>
+
+                                @forelse($locations as $location)
+                                    <li>
+                                        <div class="icon_box"><i class="fa fa-map-marker"></i></div>
+                                        <div class="text-box">
+                                            <p><strong>{{ $location->title }}</strong><br>{!! nl2br(e($location->address)) !!}</p>
+                                        </div>
+                                    </li>
+                                @empty
+                                    @if(!empty($setting->business_address))
+                                        <li>
+                                            <div class="icon_box"><i class="fa fa-map-marker"></i></div>
+                                            <div class="text-box">
+                                                <p><strong>Address:</strong><br>{!! nl2br(e($setting->business_address)) !!}</p>
+                                            </div>
+                                        </li>
+                                    @endif
+                                @endforelse
+
+                                @if($email)
+                                    <li>
+                                        <div class="icon_box"><i class="fa-solid fa-envelope"></i></div>
+                                        <div class="text-box">
+                                            <p><strong>Email:-</strong><br><a href="mailto:{{ $email }}">{{ $email }}</a></p>
+                                        </div>
+                                    </li>
+                                @endif
+
+                                @if($phones->isNotEmpty())
+                                    <li>
+                                        <div class="icon_box"><i class="fa-solid fa-phone"></i></div>
+                                        <div class="text-box">
+                                            <p>
+                                                <strong>Phone:-</strong><br>
+                                                @foreach($phones as $phone)
+                                                    <a href="tel:{{ preg_replace('/[^\d+]/', '', $phone) }}">{{ $phone }}</a>@if(!$loop->last), @endif
+                                                @endforeach
+                                            </p>
+                                        </div>
+                                    </li>
+                                @endif
+
+                                @if(!empty($setting->whatsapp))
+                                    <li>
+                                        <div class="icon_box"><i class="fa-brands fa-whatsapp"></i></div>
+                                        <div class="text-box">
+                                            <p>
+                                                <strong>WhatsApp:-</strong><br>
+                                                <a href="https://wa.me/{{ preg_replace('/\D/', '', $setting->whatsapp) }}" target="_blank" rel="noopener">{{ $setting->whatsapp }}</a>
+                                            </p>
+                                        </div>
+                                    </li>
+                                @endif
+
+                                @if(!empty($setting->business_hours))
+                                    <li>
+                                        <div class="icon_box"><i class="fa-regular fa-clock"></i></div>
+                                        <div class="text-box">
+                                            <p><strong>Business Hours:-</strong><br>{!! nl2br(e($setting->business_hours)) !!}</p>
+                                        </div>
+                                    </li>
+                                @endif
+
                             </ul>
                         </div>
                     </div>
@@ -77,9 +116,25 @@
 
                     <div class="form-box default-form">
                         <div class="default-form">
-                            {{-- TODO: point this to your own route/controller (old action was a demo URL) --}}
-                            <form id="contact_form" name="contact_form" class="home-contact-form contact-form select-form" action="#" method="POST">
+
+                            @if(session('success'))
+                                <div class="alert alert-success">{{ session('success') }}</div>
+                            @endif
+
+                            @if($errors->any())
+                                <div class="alert alert-danger">
+                                    <ul class="list-unstyled" style="margin:0;">
+                                        @foreach($errors->all() as $error)
+                                            <li>{{ $error }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+
+                            <form id="contact_form" name="contact_form" class="home-contact-form contact-form select-form" action="{{ route('enquiry.submit') }}" method="POST">
                                 @csrf
+                                <input type="hidden" name="form_type" value="contact">
+
                                 <div class="row clearfix">
                                     <div class="col-xxl-6 col-xl-6 col-lg-6 col-md-6 col-sm-6 col-xs-12">
                                         <div class="form-group">
@@ -122,14 +177,16 @@
     </div>
 </section>
 
-<section class="home-google-map">
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-12">
-                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3560.0614520483236!2d80.92167791504335!3d26.83799768315979!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x399bfdb44787aacb%3A0xb71b336be205a061!2sThe%20Hamam%20The%20Darwaaza!5e0!3m2!1sen!2sin!4v1677669256990!5m2!1sen!2sin" width="100%" height="350" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+@if(!empty($setting->google_map_url))
+    <section class="home-google-map">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-12">
+                    <iframe src="{{ $setting->google_map_url }}" width="100%" height="350" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
+@endif
 
 @endsection
