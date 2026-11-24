@@ -50,16 +50,7 @@
             <a href="#"><i class="fa-solid fa-layer-group"></i> Master</a>
             <ul>
                 <li><a href="{{ route('admin.categories.index') }}">Categories & Sub Categories</a></li>
-            </ul>
-        </li>
-
-        {{-- PRODUCT & INVENTORIES --}}
-        <li class="{{ request()->routeIs(
-    'admin.products.*',
-) ? 'active' : '' }}">
-            <a href="#"><i class="fa-solid fa-box"></i> Product & Inventories</a>
-            <ul>
-                <li><a href="{{ route('admin.products.index') }}">Manage Products</a></li>
+                 <li><a href="{{ route('admin.products.index') }}">Manage Products</a></li>
             </ul>
         </li>
 
@@ -95,15 +86,9 @@
             <ul>
 
                 <li><a href="{{ route('admin.admin-setting.index', ['tab' => 'general']) }}">General Setting</a></li>
-                <li><a href="{{ route('admin.admin-setting.index', ['tab' => 'payment']) }}">Payment Gateway</a></li>
-                <li><a href="{{ route('admin.admin-setting.index', ['tab' => 'shipping']) }}">Shipping Charges</a></li>
                 <li><a href="{{ route('admin.admin-setting.index', ['tab' => 'smtp']) }}">SMTP</a></li>
                 <li><a href="{{ route('admin.settings.email-templates.index') }}">Email Template Settings</a></li>
-                <li><a href="{{ route('admin.admin-setting.index', ['tab' => 'gst']) }}">GST & Invoice</a></li>
-                <li><a href="{{ route('admin.admin-setting.index', ['tab' => 'couriers']) }}">Courier Management</a>
-                </li>
                 <li><a href="{{ route('admin.admin-setting.index', ['tab' => 'tracking']) }}">Tracking & Pixels</a></li>
-                <li><a href="{{ route('admin.notifications.index') }}">Notification Centre</a></li>
                 <li><a href="{{ route('admin.security.system-logs') }}">System Logs</a></li>
                 <li><a href="{{ route('admin.redirect-settings.index') }}">Re-Direction Setting</a></li>
             </ul>

@@ -3,11 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\ApiLog;
 use App\Models\EmailLog;
-use App\Models\PaymentLog;
 use App\Models\AuthLog;
-use App\Models\OrderStatusHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -42,34 +39,6 @@ class SystemLogController extends Controller
             'blocked' => EmailLog::where('status', 'blocked')->count(),
         ];
 
-        $paymentQuery = PaymentLog::query()->latest();
-
-        if ($request->filled('payment_status')) {
-            $paymentQuery->where('status', $request->payment_status);
-        }
-
-        if ($request->filled('payment_gateway')) {
-            $paymentQuery->where('gateway', $request->payment_gateway);
-        }
-
-        if ($request->filled('payment_search')) {
-            $search = $request->payment_search;
-            $paymentQuery->where(function ($q) use ($search) {
-                $q->where('order_number', 'like', "%{$search}%")
-                  ->orWhere('payment_id', 'like', "%{$search}%")
-                  ->orWhere('customer_email', 'like', "%{$search}%");
-            });
-        }
-
-        $paymentLogs = $paymentQuery->paginate(20)->withQueryString();
-
-        $paymentStats = [
-            'total'    => PaymentLog::count(),
-            'captured' => PaymentLog::where('status', 'captured')->count(),
-            'failed'   => PaymentLog::where('status', 'failed')->count(),
-            'pending'  => PaymentLog::whereIn('status', ['created', 'pending'])->count(),
-        ];
-
         $authQuery = AuthLog::query()->latest();
 
         if ($request->filled('auth_event')) {
@@ -96,82 +65,7 @@ class SystemLogController extends Controller
             'admin'  => AuthLog::where('user_type', 'admin')->count(),
         ];
 
-        $orderEventQuery = OrderStatusHistory::query()->with('order')->latest();
-
-        if ($request->filled('order_status')) {
-            $orderEventQuery->where('status', $request->order_status);
-        }
-
-        if ($request->filled('order_search')) {
-            $search = $request->order_search;
-            $orderEventQuery->where(function ($q) use ($search) {
-                $q->where('remarks', 'like', "%{$search}%")
-                  ->orWhereHas('order', function ($oq) use ($search) {
-                      $oq->where('order_number', 'like', "%{$search}%")
-                         ->orWhere('customer_name', 'like', "%{$search}%");
-                  });
-            });
-        }
-
-        $orderEvents = $orderEventQuery->paginate(20)->withQueryString();
-
-        $orderEventStats = [
-            'total'     => OrderStatusHistory::count(),
-            'cancelled' => OrderStatusHistory::where('status', 'cancelled')->count(),
-        ];
-
-        /*
-        |--------------------------------------------------------------------------
-        | API Logs (Razorpay, reCAPTCHA, and any future outbound service calls)
-        |--------------------------------------------------------------------------
-        */
-        $apiQuery = ApiLog::query()->latest();
-
-        if ($request->filled('api_method')) {
-            $apiQuery->where('method', $request->api_method);
-        }
-
-        if ($request->filled('api_service')) {
-            $apiQuery->where('service', $request->api_service);
-        }
-
-        if ($request->filled('api_status')) {
-            match ($request->api_status) {
-                '2xx' => $apiQuery->whereBetween('status_code', [200, 299]),
-                '4xx' => $apiQuery->whereBetween('status_code', [400, 499]),
-                '5xx' => $apiQuery->whereBetween('status_code', [500, 599]),
-                default => null,
-            };
-        }
-
-        if ($request->filled('api_search')) {
-            $search = $request->api_search;
-            $apiQuery->where(function ($q) use ($search) {
-                $q->where('endpoint', 'like', "%{$search}%")
-                  ->orWhere('ip_address', 'like', "%{$search}%")
-                  ->orWhere('service', 'like', "%{$search}%");
-            });
-        }
-
-        $apiLogs = $apiQuery->paginate(20)->withQueryString();
-
-        $apiStats = [
-            'total'  => ApiLog::count(),
-            'failed' => ApiLog::where(function ($q) {
-                $q->whereNull('status_code')
-                  ->orWhere('status_code', '>=', 400)
-                  ->orWhereNotNull('error_message');
-            })->count(),
-        ];
-
-        // Distinct services for the filter dropdown — grows automatically as
-        // new integrations start writing to api_logs.
-        $apiServices = ApiLog::query()
-            ->whereNotNull('service')
-            ->distinct()
-            ->orderBy('service')
-            ->pluck('service');
-
+        
        /*
         |--------------------------------------------------------------------------
         | All Logs (unified feed — unions Email/Payment/Auth/Order/API logs)
@@ -336,12 +230,10 @@ class SystemLogController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $allLogsTotal = EmailLog::count() + PaymentLog::count() + AuthLog::count()
-            + OrderStatusHistory::count() + ApiLog::count();
+        $allLogsTotal = EmailLog::count() + AuthLog::count();
 
         return view('admin.security.system-logs', compact(
-            'emailLogs', 'emailStats', 'paymentLogs', 'paymentStats', 'authLogs', 'authStats',
-            'orderEvents', 'orderEventStats', 'apiLogs', 'apiStats', 'apiServices',
+            'emailLogs', 'emailStats','authLogs', 'authStats',
             'allLogs', 'allLogsTotal'
         ));
     }

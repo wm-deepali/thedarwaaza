@@ -2,44 +2,41 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\Category;
 use App\Http\Controllers\Controller;
+use App\Models\Category;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use App\Imports\CategoryImport;
-use Maatwebsite\Excel\Facades\Excel;
-use Symfony\Component\HttpFoundation\StreamedResponse;
-use ZipArchive;
+use Illuminate\Validation\Rule;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\Format;
 
 class CategoryController extends Controller
 {
-    // ✅ List Page
+    // Slugs that already belong to fixed routes (catch-all /{slug} must not override them)
+    private const RESERVED_SLUGS = [
+        'index', 'about', 'contact', 'enquiry', 'strength',
+        'admin', 'login', 'logout', 'register', 'storage', 'api',
+    ];
+
+    // ✅ List
     public function index(Request $request)
     {
-        $query = Category::with('parent', 'children');
+        $query = Category::with('parent')->withCount('children');
 
-        // Parent categories dropdown
-        $parentCategories = Category::whereNull('parent_id')
-            ->orderBy('name')
-            ->get();
+        // Parent filter dropdown (only categories that have children)
+        $parentCategories = Category::whereHas('children')->orderBy('name')->get();
 
-        // Search
         if ($request->filled('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
 
-        // Type filter
         if ($request->type == 'category') {
-
             $query->whereNull('parent_id');
-
         } elseif ($request->type == 'subcategory') {
-
             $query->whereNotNull('parent_id');
 
             if ($request->filled('category_id')) {
@@ -47,139 +44,49 @@ class CategoryController extends Controller
             }
         }
 
-        // Sorting
-        $sortBy = $request->get('sort_by', 'id');
-        $sortOrder = $request->get('sort_order', 'desc');
+        $sortBy    = $request->get('sort_by', 'id');
+        $sortOrder = in_array($request->get('sort_order'), ['asc', 'desc']) ? $request->sort_order : 'desc';
 
-        $allowedColumns = [
-            'id',
-            'name',
-            'sort_order',
-            'status',
-            'is_popular'
-        ];
-
-        if (in_array($sortBy, $allowedColumns)) {
+        if (in_array($sortBy, ['id', 'name', 'sort_order', 'status', 'show_in_navbar'])) {
             $query->orderBy($sortBy, $sortOrder);
         }
 
-        $categories = $query
-            ->paginate(10)
-            ->appends($request->all());
+        $categories = $query->paginate(10)->appends($request->all());
 
-        return view('admin.categories.index', compact(
-            'categories',
-            'parentCategories'
-        ));
+        return view('admin.categories.index', compact('categories', 'parentCategories'));
     }
 
     // ✅ Create
     public function create()
     {
-        $parents = Category::whereNull('parent_id')->get();
+        $parents = Category::orderBy('name')->get();
 
         return view('admin.categories.create', compact('parents'));
-    }
-
-    /**
-     * ✅ Compress & store an uploaded image as WebP.
-     * Resizes down to max width (keeps aspect ratio, never upscales)
-     * and re-encodes as WebP at given quality to shrink file size.
-     * Same pattern used for La Pavone product image optimization.
-     */
-    private function compressAndStore(
-        UploadedFile $file,
-        string $folder,
-        int $maxWidth = 1200,
-        int $quality = 80
-    ): string {
-        $manager = ImageManager::usingDriver(Driver::class);
-
-        $image = $manager->decode($file);
-
-        // Only downscale, never upscale
-        if ($image->width() > $maxWidth) {
-            $image->scale(width: $maxWidth);
-        }
-
-        $encoded = $image->encodeUsingFormat(Format::WEBP, quality: $quality);
-
-        $filename = Str::uuid() . '.webp';
-        $path = trim($folder, '/') . '/' . $filename;
-
-        Storage::disk('public')->put($path, (string) $encoded);
-
-        return $path;
-    }
-
-    /**
-     * Editor-empty check: "<p><br></p>" and similar count as empty,
-     * but a table with no text is still kept.
-     */
-    private function cleanRichText(?string $html): ?string
-    {
-        $html = trim((string) $html);
-
-        if ($html === '') {
-            return null;
-        }
-
-        $text = trim(str_replace('&nbsp;', ' ', strip_tags($html)));
-
-        if ($text === '' && !preg_match('/<(table|img)\b/i', $html)) {
-            return null;
-        }
-
-        return $html;
     }
 
     // ✅ Store
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'size_chart' => 'nullable|string',
-        ]);
+        $this->prepareSlug($request);
+        $request->validate($this->rules(), $this->messages());
 
-        $image = null;
-
-        if ($request->hasFile('image')) {
-            // Displayed as a small card (~121x171 on frontend) -> keep small, ~3x retina buffer
-            $image = $this->compressAndStore(
-                $request->file('image'),
-                'categories',
-                400,
-                80
-            );
+        if ($this->parentHasProducts($request)) {
+            return back()
+                ->withErrors(['parent_id' => 'This category already has products. Remove them before adding sub categories under it.'])
+                ->withInput();
         }
 
-        Category::create([
-            'name' => $request->name,
-            'sub_title' => $request->sub_title,
+        $data = $this->payload($request);
 
-            // ✅ slug safe
-            'slug' => $request->slug
-                ? Str::slug($request->slug)
-                : Str::slug($request->name),
+        if ($request->hasFile('image')) {
+            $data['image'] = $this->compressAndStore($request->file('image'), 'categories', 800, 80);
+        }
 
-            'meta_title' => $request->meta_title,
-            'meta_description' => $request->meta_description,
-            'image' => $image,
-            'size_chart' => $this->cleanRichText($request->size_chart),
+        if ($request->hasFile('banner_image')) {
+            $data['banner_image'] = $this->compressAndStore($request->file('banner_image'), 'categories/banners', 1600, 80);
+        }
 
-            // ✅ FIXED
-            'parent_id' => $request->parent_id ?: null,
-
-            // FLAGS
-            'is_popular' => $request->is_popular ?? 0,
-            'is_featured' => $request->is_featured ?? 0,
-            'show_in_navbar' => $request->show_in_navbar ?? 0,
-
-            'added_by' => 'admin',
-
-            'status' => $request->status ?? 1,
-            'sort_order' => $request->sort_order ?? 0,
-        ]);
+        Category::create($data);
 
         return redirect()->route('admin.categories.index')
             ->with('success', 'Category Added Successfully');
@@ -190,17 +97,14 @@ class CategoryController extends Controller
     {
         $category = Category::findOrFail($id);
 
-        $parents = Category::whereNull('parent_id')
-            ->where('id', '!=', $id)
-            ->get();
+        // Can't pick itself or its own children as parent
+        $exclude = array_merge([$category->id], $category->descendantIds());
+
+        $parents = Category::whereNotIn('id', $exclude)->orderBy('name')->get();
 
         $redirect = $request->redirect;
 
-        return view('admin.categories.edit', compact(
-            'category',
-            'parents',
-            'redirect'
-        ));
+        return view('admin.categories.edit', compact('category', 'parents', 'redirect'));
     }
 
     // ✅ Update
@@ -208,53 +112,36 @@ class CategoryController extends Controller
     {
         $category = Category::findOrFail($id);
 
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'size_chart' => 'nullable|string',
-        ]);
+        $this->prepareSlug($request);
+        $request->validate($this->rules($category), $this->messages());
 
-        $image = $category->image;
+        if ($request->filled('parent_id')) {
+            $blocked = array_merge([$category->id], $category->descendantIds());
 
-        if ($request->hasFile('image')) {
-
-            if ($category->image && Storage::disk('public')->exists($category->image)) {
-                Storage::disk('public')->delete($category->image);
+            if (in_array((int) $request->parent_id, $blocked, true)) {
+                return back()
+                    ->withErrors(['parent_id' => 'A category cannot be moved under itself or its own sub category.'])
+                    ->withInput();
             }
-
-            $image = $this->compressAndStore(
-                $request->file('image'),
-                'categories',
-                400,
-                80
-            );
         }
 
-        $category->update([
-            'name' => $request->name,
-            'sub_title' => $request->sub_title,
+        if ($this->parentHasProducts($request)) {
+            return back()
+                ->withErrors(['parent_id' => 'This category already has products. Remove them before adding sub categories under it.'])
+                ->withInput();
+        }
 
-            // ✅ slug safe
-            'slug' => $request->slug
-                ? Str::slug($request->slug)
-                : $category->slug,
+        $data = $this->payload($request);
 
-            'meta_title' => $request->meta_title,
-            'meta_description' => $request->meta_description,
-            'image' => $image,
-            'size_chart' => $this->cleanRichText($request->size_chart),
+        $data['image'] = $this->replaceImage($request, 'image', $category->image, 'categories', 800);
+        $data['banner_image'] = $this->replaceImage($request, 'banner_image', $category->banner_image, 'categories/banners', 1600);
 
-            // ✅ FIXED
-            'parent_id' => $request->parent_id ?: null,
+        $category->update($data);
 
-            'is_popular' => $request->is_popular ?? 0,
-            'is_featured' => $request->is_featured ?? 0,
-            'show_in_navbar' => $request->show_in_navbar ?? 0,
+        $redirect = $request->redirect;
+        $safe = $redirect && Str::startsWith($redirect, url('/'));
 
-            'status' => $request->status ?? 1,
-            'sort_order' => $request->sort_order ?? 0,
-        ]);
-
-        return redirect($request->redirect ?? route('admin.categories.index'))
+        return redirect($safe ? $redirect : route('admin.categories.index'))
             ->with('success', 'Category Updated Successfully');
     }
 
@@ -263,184 +150,121 @@ class CategoryController extends Controller
     {
         $category = Category::findOrFail($id);
 
-        if ($category->image && Storage::disk('public')->exists($category->image)) {
-            Storage::disk('public')->delete($category->image);
+        if ($category->children()->exists()) {
+            return response()->json([
+                'message' => 'This category has sub categories. Delete or move them first.'
+            ], 422);
+        }
+
+        if ($category->products()->exists()) {
+            return response()->json([
+                'message' => 'This category has products. Delete them first.'
+            ], 422);
+        }
+
+        foreach ([$category->image, $category->banner_image] as $file) {
+            if ($file && Storage::disk('public')->exists($file)) {
+                Storage::disk('public')->delete($file);
+            }
         }
 
         $category->delete();
 
-        return response()->json([
-            'message' => 'Category Deleted Successfully'
+        return response()->json(['message' => 'Category Deleted Successfully']);
+    }
+
+    /* ───────────────────────── helpers ───────────────────────── */
+
+    private function prepareSlug(Request $request): void
+    {
+        $request->merge([
+            'slug' => Str::slug($request->slug ?: $request->name),
         ]);
     }
 
-    public function import()
+    // A category that already holds products can't also get sub categories
+    private function parentHasProducts(Request $request): bool
     {
-        return view('admin.categories.import');
+        return $request->filled('parent_id')
+            && Product::where('category_id', $request->parent_id)->exists();
     }
 
-    public function importStore(Request $request)
+    private function rules(?Category $category = null): array
     {
-        $request->validate([
-            'file' => 'required|mimetypes:text/plain,text/csv,application/vnd.ms-excel'
-        ]);
-
-        try {
-
-            Excel::import(
-                new CategoryImport,
-                $request->file('file')
-            );
-
-            return redirect()
-                ->route('admin.categories.index')
-                ->with('success', 'Categories imported successfully.');
-
-        } catch (\Exception $e) {
-
-            return back()->with(
-                'error',
-                $e->getMessage()
-            );
-        }
-    }
-
-    public function downloadSample()
-    {
-        $headers = [
-            'name',
-            'sub_title',
-            'image_name',
-            'parent_category',
-            'meta_title',
-            'meta_description',
-            'is_popular',
-            'is_featured',
-            'status',
-            'sort_order'
+        return [
+            'name'             => 'required|string|max:255',
+            'slug'             => [
+                'required', 'string', 'max:255',
+                Rule::unique('categories', 'slug')->ignore($category?->id),
+                Rule::notIn(self::RESERVED_SLUGS),
+            ],
+            'parent_id'        => 'nullable|exists:categories,id',
+            'image'            => 'nullable|mimes:jpg,jpeg,png,webp|max:2048',
+            'banner_image'     => 'nullable|mimes:jpg,jpeg,png,webp|max:4096',
+            'meta_title'       => 'nullable|string|max:255',
+            'meta_description' => 'nullable|string',
+            'meta_keywords'    => 'nullable|string',
+            'canonical_url'    => 'nullable|url|max:255',
+            'sort_order'       => 'nullable|integer|min:0',
         ];
+    }
 
-        $sampleRow = [
-            'Corporate Gifts',
-            'Premium Corporate Gifts',
-            'corporate-gifts.jpg',
-            '',
-            'Corporate Gifts',
-            'Corporate Gifts Category',
-            '1',
-            '1',
-            '1',
-            '1'
+    private function messages(): array
+    {
+        return [
+            'slug.not_in' => 'This slug is reserved for a fixed page. Please use another one.',
         ];
-
-        $response = new StreamedResponse(function () use ($headers, $sampleRow) {
-
-            $handle = fopen('php://output', 'w');
-
-            fputcsv($handle, $headers);
-            fputcsv($handle, $sampleRow);
-
-            fclose($handle);
-        });
-
-        $response->headers->set(
-            'Content-Type',
-            'text/csv'
-        );
-
-        $response->headers->set(
-            'Content-Disposition',
-            'attachment; filename=category_import_sample.csv'
-        );
-
-        return $response;
     }
 
-    public function uploadImagesZip(Request $request)
+    private function payload(Request $request): array
     {
-        $request->validate([
-            'zip_file' => 'required|mimes:zip'
-        ]);
+        return [
+            'name'             => $request->name,
+            'slug'             => $request->slug,
+            'parent_id'        => $request->parent_id ?: null,
+            'meta_title'       => $request->meta_title,
+            'meta_description' => $request->meta_description,
+            'meta_keywords'    => $request->meta_keywords,
+            'canonical_url'    => $request->canonical_url,
+            'sort_order'       => $request->sort_order ?? 0,
+            'show_in_navbar'   => $request->boolean('show_in_navbar'),
+            'status'           => $request->boolean('status'),
+        ];
+    }
 
-        try {
-
-            $zip = new ZipArchive();
-
-            if ($zip->open($request->file('zip_file')->getRealPath()) === true) {
-
-                $extractPath = storage_path(
-                    'app/public/categories'
-                );
-
-                if (!file_exists($extractPath)) {
-                    mkdir($extractPath, 0777, true);
-                }
-
-                $zip->extractTo($extractPath);
-
-                $zip->close();
-
-                return back()->with(
-                    'success',
-                    'Category images uploaded successfully.'
-                );
-            }
-
-            return back()->with(
-                'error',
-                'Unable to extract ZIP file.'
-            );
-
-        } catch (\Exception $e) {
-
-            return back()->with(
-                'error',
-                $e->getMessage()
-            );
+    // Keeps old file if nothing new is uploaded, otherwise deletes old + stores new
+    private function replaceImage(Request $request, string $field, ?string $old, string $folder, int $maxWidth): ?string
+    {
+        if (!$request->hasFile($field)) {
+            return $old;
         }
+
+        if ($old && Storage::disk('public')->exists($old)) {
+            Storage::disk('public')->delete($old);
+        }
+
+        return $this->compressAndStore($request->file($field), $folder, $maxWidth, 80);
     }
 
-    public function downloadParentCategoryReference()
+    /**
+     * Resize down (never upscale) and store as WebP.
+     */
+    private function compressAndStore(UploadedFile $file, string $folder, int $maxWidth = 1200, int $quality = 80): string
     {
-        $categories = Category::whereNull('parent_id')
-            ->orWhere('parent_id', 0)
-            ->orderBy('id')
-            ->get([
-                'id',
-                'name'
-            ]);
+        $manager = ImageManager::usingDriver(Driver::class);
 
-        $response = new StreamedResponse(function () use ($categories) {
+        $image = $manager->decode($file);
 
-            $handle = fopen('php://output', 'w');
+        if ($image->width() > $maxWidth) {
+            $image->scale(width: $maxWidth);
+        }
 
-            fputcsv($handle, [
-                'id',
-                'category_name'
-            ]);
+        $encoded = $image->encodeUsingFormat(Format::WEBP, quality: $quality);
 
-            foreach ($categories as $category) {
+        $path = trim($folder, '/') . '/' . Str::uuid() . '.webp';
 
-                fputcsv($handle, [
-                    $category->id,
-                    $category->name
-                ]);
-            }
+        Storage::disk('public')->put($path, (string) $encoded);
 
-            fclose($handle);
-        });
-
-        $response->headers->set(
-            'Content-Type',
-            'text/csv'
-        );
-
-        $response->headers->set(
-            'Content-Disposition',
-            'attachment; filename=parent_category_reference.csv'
-        );
-
-        return $response;
+        return $path;
     }
-
 }
