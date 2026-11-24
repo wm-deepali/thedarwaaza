@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\{
     RedirectController,
     CategoryController,
     SystemLogController,
+    AboutPageController,
+    HomeBlockController,
     DashboardController,
     AdminSettingController,
     EmailTemplateController,
@@ -24,11 +26,11 @@ Route::middleware('maintenance.mode')->group(function () {
     Route::controller(FrontController::class)->group(function () {
         Route::get('/', 'home')->name('home');
 
-        Route::view('/about', 'front-pages.about')->name('about');
+        Route::get('/about', 'about')->name('about');
         Route::get('/enquiry', 'enquiry')->name('enquiry');
-        Route::post('/enquiry', 'enquirySubmit')->name('enquiry.submit');
         Route::get('/contact', 'contact')->name('contact');
         Route::view('/strength', 'front-pages.strength')->name('strength');
+        Route::post('/enquiry', 'enquirySubmit')->name('enquiry.submit');
 
         Route::get('category/{slug}', 'categoryDetail')->where('slug', '[A-Za-z0-9\-]+')->name('category.show');
     });
@@ -51,9 +53,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('/profile-setting', ProfileSettingController::class);
         Route::post('/resetpassword', [ProfileSettingController::class, 'resetPassword'])->name('reset.password');
 
+        Route::resource('home-blocks', HomeBlockController::class)->only(['index', 'store', 'update', 'destroy']);
+
+        Route::get('about-page', [AboutPageController::class, 'edit'])->name('about-page.edit');
+        Route::put('about-page', [AboutPageController::class, 'update'])->name('about-page.update');
+        Route::post('about-page/items', [AboutPageController::class, 'itemStore'])->name('about-page.items.store');
+        Route::put('about-page/items/{item}', [AboutPageController::class, 'itemUpdate'])->name('about-page.items.update');
+        Route::delete('about-page/items/{item}', [AboutPageController::class, 'itemDestroy'])->name('about-page.items.destroy');
+
         Route::post('categories/bulk', [CategoryController::class, 'storeBulk'])->name('categories.bulk-store');
         Route::resource('categories', CategoryController::class)->except(['show']);
-        
+
         Route::get('products/import-template', [ProductController::class, 'importTemplate'])->name('products.import-template');
         Route::post('products/import', [ProductController::class, 'import'])->name('products.import');
         Route::resource('products', ProductController::class)->only(['index', 'store', 'update', 'destroy']);

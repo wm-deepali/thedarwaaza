@@ -19,6 +19,8 @@ class DatabaseSeeder extends Seeder
             SettingSeeder::class,
             SeoPageSeeder::class,
             CategorySeeder::class,
+            HomeBlockSeeder::class,
+            AboutPageSeeder::class,
             ContactLocationSeeder::class,
         ]);
 

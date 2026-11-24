@@ -34,11 +34,11 @@
 
 @php
     // admin-setting page is shared by General / SMTP / Tracking tabs
-    $settingTab     = request('tab', 'general');
+    $settingTab = request('tab', 'general');
 
     $marketingActive = request()->routeIs('admin.seo.*', 'admin.redirect-settings.*');
-    $settingsActive  = request()->routeIs('admin.settings.*', 'admin.security.*')
-                        || (request()->routeIs('admin.admin-setting.*'));
+    $settingsActive = request()->routeIs('admin.settings.*', 'admin.security.*')
+        || (request()->routeIs('admin.admin-setting.*'));
 @endphp
 
 <div id='cssmenu'>
@@ -69,9 +69,12 @@
         </li>
 
         {{-- WEBSITE CONTENT --}}
-        <li class="{{ request()->routeIs('admin.contact-locations.*') ? 'active' : '' }}">
+        <li
+            class="{{ request()->routeIs('admin.home-blocks.*', 'admin.about-page.*', 'admin.contact-locations.*') ? 'active' : '' }}">
             <a href="#"><i class="fa-solid fa-globe"></i> Website Content</a>
             <ul>
+                <li><a href="{{ route('admin.home-blocks.index') }}">Home Page</a></li>
+                <li><a href="{{ route('admin.about-page.edit') }}">About Page</a></li>
                 <li><a href="{{ route('admin.contact-locations.index') }}">Contact Addresses</a></li>
             </ul>
         </li>

@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Category;
-use App\Models\ContactEnquiry;
-use App\Models\ContactLocation;
 use App\Models\Product;
 use App\Models\Setting;
-use App\Services\Email\EmailDispatcher;
+use App\Models\Category;
+use App\Models\HomeBlock;
+use App\Models\AboutItem;
+use App\Models\AboutPage;
 use Illuminate\Http\Request;
+use App\Models\ContactEnquiry;
+use App\Models\ContactLocation;
 use Illuminate\Support\Facades\Log;
+use App\Services\Email\EmailDispatcher;
 
 class FrontController extends Controller
 {
@@ -21,7 +24,13 @@ class FrontController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('front-pages.home', compact('categories'));
+        $blocks = HomeBlock::active()->orderBy('sort_order')->orderBy('id')->get()->groupBy('section');
+
+        $sliders = $blocks->get('slider', collect());
+        $features = $blocks->get('feature', collect());
+        $topSellers = $blocks->get('top_seller', collect());
+
+        return view('front-pages.home', compact('categories', 'sliders', 'features', 'topSellers'));
     }
 
     public function categoryDetail(string $slug)
@@ -63,6 +72,17 @@ class FrontController extends Controller
             'og_image' => $category->banner_url,
             'og_type' => 'website',
         ];
+    }
+
+    public function about()
+    {
+        $page = AboutPage::getInstance();
+
+        $items = AboutItem::active()->orderBy('sort_order')->orderBy('id')->get()->groupBy('type');
+        $whyItems = $items->get('why', collect());
+        $processItems = $items->get('process', collect());
+
+        return view('front-pages.about', compact('page', 'whyItems', 'processItems'));
     }
 
     public function contact()
