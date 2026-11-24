@@ -23,8 +23,6 @@ return new class extends Migration {
                 ->constrained('categories')
                 ->nullOnDelete();
 
-            $table->foreignId('brand_id')->nullable()->constrained('brands')->nullOnDelete();
-
             $table->string('name');
 
             $table->string('slug')->unique();

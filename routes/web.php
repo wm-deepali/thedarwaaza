@@ -1,145 +1,36 @@
 <?php
 
 use App\Http\Controllers\Admin\{
-    FaqController,
-    NdrController,
     SeoController,
-    BlogController,
-    OrderController,
-    CouponController,
     LogoutController,
-    RefundController,
     ProductController,
-    PaymentController,
     RedirectController,
-    HomeReelController,
-    HomePageController,
-    CustomerController,
     CategoryController,
-    PageHeroController,
-    TaxReportController,
-    AboutPageController,
     SystemLogController,
     DashboardController,
-    NdrReportController,
-    AttributeController,
-    HomeStoryController,
-    HomeSliderController,
-    StoredCartController,
-    CreditNoteController,
-    CollectionController,
-    OfferModalController,
-    DynamicPageController,
-    FaqCategoryController,
-    StockAlertsController,
-    SalesReportController,
-    OrderReportController,
-    OrderReturnController,
     AdminSettingController,
-    HomeCampaignController,
-    ReturnReasonController,
-    AnnouncementController,
-    CouponReportController,
     NotificationController,
-    CustomizationController,
-    ProductReportController,
-    CouponEnquiryController,
     EmailTemplateController,
     ProfileSettingController,
-    AttributeValueController,
-    CustomerReportController,
     ContactEnquiryController,
-    StockManagementController,
-    GiftingOccasionController,
-    CustomerAddressController,
-    CancelledRefundController,
-    CustomerWishlistController,
-    CancelledInvoiceController,
-    CategoryAttributeController,
-    NewsletterSubscriberController
 };
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\CartController;
 use App\Http\Controllers\FrontController;
 use App\Http\Controllers\PincodeController;
-use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\CustomerAuthController;
-use App\Http\Controllers\ProductReviewController;
-use App\Http\Controllers\UserDashboardController;
-use App\Http\Controllers\RazorpayWebhookController;
 
 Route::middleware('maintenance.mode')->group(function () {
 
     Route::controller(FrontController::class)->group(function () {
         Route::get('/', 'home')->name('home');
-        Route::get('/faqs', 'faqs')->name('faqs');
-        Route::get('/blog', 'blogs')->name('blogs');
-        Route::get('/about-us', 'about')->name('about');
-        Route::get('/contact', 'contact')->name('contact');
-        Route::get('/products', 'products')->name('products');
-        Route::get('/blog/{slug}', 'blogDetail')->name('blog.show');
-        Route::get('/categories', 'categories')->name('categories');
-        Route::get('/product/{slug}', 'productShow')->name('products.show');
-        Route::get('/category/{slug}', 'categoryShow')->name('category.show');
-        Route::get('/page/{slug}', 'pageDetail')->where('slug', '[a-z0-9\-]+')->name('page.show');
-        Route::post('/contact', 'contactSubmit')->middleware('throttle:5,1')->name('contact.submit');
-        Route::get('/search/suggest', 'searchSuggest')->middleware('throttle:60,1')->name('search.suggest');
-        Route::post('/newsletter/subscribe', 'newsletterSubscribe')->middleware('throttle:5,1')->name('newsletter.subscribe');
-        Route::get('/products/{id}/quick-view', 'quickView')->whereNumber('id')->middleware('throttle:60,1')->name('products.quick-view');
     });
 
     Route::get('/pincode/check', [PincodeController::class, 'check'])->middleware('throttle:30,1')->name('pincode.check');
-    Route::post('/product/{product}/review', [ProductReviewController::class, 'store'])->middleware(['customer', 'throttle:5,1'])->name('product.review.store');
-
-    // cart routes
-    Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
-    Route::get('/cart', [CartController::class, 'cart'])->name('cart');
-    Route::delete('/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
-    Route::post('/cart/update-quantity', [CartController::class, 'updateQuantity'])->name('cart.update.quantity');
-    Route::post('/cart/apply-coupon', [CartController::class, 'applyCoupon'])->name('cart.apply.coupon');
-    Route::post('/cart/remove-coupon', [CartController::class, 'removeCoupon'])->name('cart.remove.coupon');
-
-    // checkout routes
-    Route::get('/checkout', [CheckoutController::class, 'checkout'])->name('checkout');
-    Route::post('/checkout/ajax-login', [CustomerAuthController::class, 'ajaxLogin'])->middleware('throttle:10,1')->name('checkout.ajax-login');
-    Route::post('/checkout/ajax-register', [CustomerAuthController::class, 'ajaxRegister'])->middleware('throttle:10,1')->name('checkout.ajax-register');
-    Route::post('/checkout/track-step', [CheckoutController::class, 'trackStep'])->middleware('throttle:30,1')->name('checkout.track-step');
-    Route::get('/states/{state}/cities', [CheckoutController::class, 'cities'])->name('state.cities');
-
-    Route::post('/wishlist/toggle', [WishlistController::class, 'toggle'])->middleware('throttle:60,1')->name('wishlist.toggle');
-
-    // customer login routes
-    Route::get('/user/google', [CustomerAuthController::class, 'redirectToGoogle'])->name('user.google.login');
-    Route::get('/user/google/callback', [CustomerAuthController::class, 'handleGoogleCallback']);
-    Route::get('/user/register', [CustomerAuthController::class, 'registerForm'])->name('user.register');
-    Route::post('/user/register', [CustomerAuthController::class, 'register'])->name('user.register.store');
-    Route::get('/user/login', [CustomerAuthController::class, 'loginForm'])->name('user.login');
-    Route::post('/user/login', [CustomerAuthController::class, 'login'])->name('user.login.store');
-
-    // Yeh sab login ke baad hi
-    Route::middleware('customer')->group(function () {
-        Route::post('/address/store', [CheckoutController::class, 'storeAddress'])->name('address.store');
-        Route::put('/address/{id}', [CheckoutController::class, 'updateAddress'])->name('address.update');
-        Route::post('/checkout/change-default-address', [CheckoutController::class, 'changeDefaultAddress'])->name('checkout.change-default-address');
-        Route::post('/checkout/place-order', [CheckoutController::class, 'placeOrder'])->name('checkout.place-order');
-        Route::post('/payment/razorpay/success', [CheckoutController::class, 'razorpaySuccess'])->name('checkout.razorpay.success');
-        Route::get('/order-success/{order}', [CheckoutController::class, 'orderSuccess'])->name('order.success');
-        Route::get('/user/dashboard', [UserDashboardController::class, 'index'])->name('user.dashboard.index');
-        Route::get('/my-orders/{order}/invoice', [UserDashboardController::class, 'invoiceDownload'])->name('account.orders.invoice');
-        Route::post('/profile/update', [UserDashboardController::class, 'updateProfile'])->name('account.profile.update');
-        Route::post('/profile/address', [UserDashboardController::class, 'storeAddress'])->name('account.address.store');
-        Route::put('/profile/address/{address}', [UserDashboardController::class, 'updateAddress'])->name('account.address.update');
-        Route::delete('/profile/address/{address}', [UserDashboardController::class, 'deleteAddress'])->name('account.address.delete');
-        Route::delete('/wishlist/{id}', [UserDashboardController::class, 'removeWishlist'])->name('account.wishlist.remove');
-        Route::post('/user/logout', [CustomerAuthController::class, 'logout'])->name('user.logout');
-    });
+ 
 
 });
 
-Route::post('/razorpay/webhook', [RazorpayWebhookController::class, 'handle'])->name('razorpay.webhook');
 
 // Admin Routes list
 Route::middleware('guest')->group(function () {
@@ -163,13 +54,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('categories/import/parent-reference', [CategoryController::class, 'downloadParentCategoryReference'])->name('categories.parent.reference');
         Route::resource('categories', CategoryController::class);
 
-        // occasion routes
-        Route::get('gifting-occasions/import', [GiftingOccasionController::class, 'import'])->name('gifting-occasions.import');
-        Route::post('gifting-occasions/import', [GiftingOccasionController::class, 'importStore'])->name('gifting-occasions.import.store');
-        Route::get('gifting-occasions/import/sample', [GiftingOccasionController::class, 'downloadSample'])->name('gifting-occasions.import.sample');
-        Route::post('gifting-occasions/upload-images', [GiftingOccasionController::class, 'uploadImagesZip'])->name('gifting-occasions.images.upload');
-        Route::resource('gifting-occasions', GiftingOccasionController::class);
-
         // product routes
         Route::get('products/subcategories/{category}', [ProductController::class, 'subcategories'])->name('products.subcategories');
         Route::get('products/category-attributes/{category}', [ProductController::class, 'categoryAttributes'])->name('products.category-attributes');
@@ -177,14 +61,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/products/import', [ProductController::class, 'import'])->name('products.import');
         Route::resource('products', ProductController::class)->names('products');
 
-        Route::resource('customizations', CustomizationController::class);
-
-        Route::resource('pages', DynamicPageController::class)->names('pages');
-
-        Route::resource('faq-categories', FaqCategoryController::class)->except(['show']);
-        Route::resource('faqs', FaqController::class)->names('faqs');
-
-        Route::resource('blogs', BlogController::class)->names('blogs');
 
         Route::get('contact-enquiries', [ContactEnquiryController::class, 'index'])->name('contact-enquiries.index');
         Route::get('contact-enquiries/export', [ContactEnquiryController::class, 'export'])->name('contact-enquiries.export');
@@ -192,164 +68,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('contact-enquiries/{contact_enquiry}', [ContactEnquiryController::class, 'show'])->name('contact-enquiries.show');
         Route::delete('contact-enquiries/{contact_enquiry}', [ContactEnquiryController::class, 'destroy'])->name('contact-enquiries.destroy');
 
-        Route::resource('coupon-enquiries', CouponEnquiryController::class);
-        Route::delete('coupon-enquiries/bulk-delete', [CouponEnquiryController::class, 'bulkDelete'])->name('coupon-enquiries.bulk-delete');
-        Route::get('coupon-enquiries-export', [CouponEnquiryController::class, 'export'])->name('coupon-enquiries.export');
-
         Route::get('/logout', [LogoutController::class, 'logout']);
-
-
-        // ✅ MAIN DASHBOARD
-        Route::get('/home-page', [HomePageController::class, 'index'])
-            ->name('home-page.index');
-
-        Route::prefix('home/sliders')->name('home.sliders.')->group(function () {
-            Route::get('/', [HomeSliderController::class, 'index'])->name('index');
-            Route::get('/create', [HomeSliderController::class, 'create'])->name('create');
-            Route::post('/store', [HomeSliderController::class, 'store'])->name('store');
-            Route::get('/edit/{id}', [HomeSliderController::class, 'edit'])->name('edit');
-            Route::put('/update/{id}', [HomeSliderController::class, 'update'])->name('update');
-            Route::delete('/delete/{id}', [HomeSliderController::class, 'destroy'])->name('destroy');
-        });
-        Route::get('campaign', [HomeCampaignController::class, 'edit'])->name('campaign.edit');
-        Route::put('campaign', [HomeCampaignController::class, 'update'])->name('campaign.update');
-
-        Route::get('story', [HomeStoryController::class, 'edit'])->name('story.edit');
-        Route::put('story', [HomeStoryController::class, 'update'])->name('story.update');
-
-        Route::resource('reels', HomeReelController::class)->except(['show']);
-
-        Route::get('subscribers', [NewsletterSubscriberController::class, 'index'])->name('subscribers.index');
-        Route::get('subscribers/export', [NewsletterSubscriberController::class, 'export'])->name('subscribers.export');
-        Route::post('subscribers/{id}/toggle', [NewsletterSubscriberController::class, 'toggle'])->name('subscribers.toggle');
-        Route::delete('subscribers/{id}', [NewsletterSubscriberController::class, 'destroy'])->name('subscribers.destroy');
-
-        Route::get('offer-modal', [OfferModalController::class, 'edit'])->name('offer-modal.edit');
-        Route::put('offer-modal', [OfferModalController::class, 'update'])->name('offer-modal.update');
-
-        Route::get('about-page', [AboutPageController::class, 'index'])->name('about.index');
-        Route::get('about-page/{key}', [AboutPageController::class, 'edit'])->name('about.edit')->where('key', '[a-z_]+');
-        Route::put('about-page/{key}', [AboutPageController::class, 'update'])->name('about.update')->where('key', '[a-z_]+');
-
-        Route::get('page-banners', [PageHeroController::class, 'index'])->name('page-heroes.index');
-        Route::get('page-banners/{page}', [PageHeroController::class, 'edit'])->name('page-heroes.edit')->where('page', '[a-z_]+');
-        Route::put('page-banners/{page}', [PageHeroController::class, 'update'])->name('page-heroes.update')->where('page', '[a-z_]+');
 
         Route::get('/seo', [SeoController::class, 'index'])->name('seo.index');
         Route::put('/seo/{id}', [SeoController::class, 'update'])->name('seo.update');
-
-        Route::resource('collections', CollectionController::class);
-
-        Route::resource('attributes', AttributeController::class);
-        Route::resource('attribute-values', AttributeValueController::class);
-
-        Route::resource('category-attributes', CategoryAttributeController::class);
-
-        Route::resource('announcements', AnnouncementController::class);
-
-        Route::post('coupons/{coupon}/share', [CouponController::class, 'share'])->name('coupons.share');
-        Route::resource('coupons', CouponController::class);
-
-
-        // Orders routes
-        Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
-        Route::get('orders/export', [OrderController::class, 'export'])->name('orders.export');
-        Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
-        Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
-        Route::get('orders/{order}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
-        Route::get('orders/{order}/invoice/download', [OrderController::class, 'invoiceDownload'])->name('orders.invoice.download');
-        Route::post('orders/{order}/generate-invoice', [OrderController::class, 'generateInvoice'])->name('orders.generate-invoice');
-        Route::post('orders/{order}/update-payment', [OrderController::class, 'updatePayment'])->name('orders.update-payment');
-        Route::post('orders/{order}/mark-ndr', [NdrController::class, 'markNdr'])->name('orders.mark-ndr');
-
-        // Credit Notes (keyed by completed RefundTransaction id)
-        Route::get('credit-notes/{refund}', [CreditNoteController::class, 'show'])->name('credit-notes.show');
-        Route::get('credit-notes/{refund}/download', [CreditNoteController::class, 'download'])->name('credit-notes.download');
-
-        // Payments routes
-        Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
-        Route::get('payments/export', [PaymentController::class, 'export'])->name('payments.export');
-
-        // Customer Address Book
-        Route::get('customers/addresses', [CustomerAddressController::class, 'index'])->name('customers.addresses.index');
-        Route::delete('customers/addresses/{address}', [CustomerAddressController::class, 'destroy'])->name('customers.addresses.destroy');
-        Route::get('customers/addresses/export', [CustomerAddressController::class, 'export'])->name('customers.addresses.export');
-
-        // Customers routes
-        Route::get('customers/customer-wishlist', [CustomerWishlistController::class, 'index'])->name('customers.customer-wishlist');
-        Route::get('customers/{customer}/wishlist-detail', [CustomerWishlistController::class, 'show'])
-            ->name('customers.customer-wishlist-detail');
-        Route::delete('customers/{customer}/wishlist/clear', [CustomerWishlistController::class, 'clearWishlist'])
-            ->name('customers.wishlist.clear');
-        Route::delete('/wishlist/{wishlistId}', [\App\Http\Controllers\Admin\CustomerWishlistController::class, 'removeItem']);
-
-
-        Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
-        Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
-        Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
-        Route::get('customers/export', [CustomerController::class, 'export'])->name('customers.export');
-
-        Route::get('stored-carts', [StoredCartController::class, 'index'])->name('stored-carts.index');
-        Route::delete('stored-carts/{cart}', [StoredCartController::class, 'destroy'])->name('stored-carts.destroy');
-        Route::get('stored-carts/export', [StoredCartController::class, 'export'])->name('stored-carts.export');
-        Route::get('stored-carts/{cart}', [StoredCartController::class, 'show'])->whereNumber('cart')->name('stored-carts.show');
-
-        Route::resource('return-reasons', ReturnReasonController::class)->names('return-reasons');
-
-        Route::get('cancelled-refunds', [CancelledRefundController::class, 'index'])->name('cancelled-refunds.index');
-        Route::post('cancelled-refunds/{order}/refund', [CancelledRefundController::class, 'refund'])->name('cancelled-refunds.refund');
-
-        Route::get('cancelled-invoices', [CancelledInvoiceController::class, 'index'])->name('cancelled-invoices.index');
-
-        Route::get('order-returns', [OrderReturnController::class, 'index'])->name('order-returns.index');
-        Route::get('order-returns/export', [OrderReturnController::class, 'export'])->name('order-returns.export');
-        Route::get('order-returns/{orderReturn}', [OrderReturnController::class, 'show'])->name('order-returns.show');
-        Route::patch('order-returns/{orderReturn}/approve', [OrderReturnController::class, 'approve'])->name('order-returns.approve');
-        Route::patch('order-returns/{orderReturn}/reject', [OrderReturnController::class, 'reject'])->name('order-returns.reject');
-        Route::post('order-returns/{orderReturn}/refund', [OrderReturnController::class, 'refund'])->name('order-returns.refund');
-        Route::patch('order-returns/{orderReturn}/mark-refund-failed', [OrderReturnController::class, 'markRefundFailed'])->name('order-returns.mark-refund-failed');
-
-        Route::get('refunds', [RefundController::class, 'index'])->name('refunds.index');
-        Route::get('refunds/export', [RefundController::class, 'export'])->name('refunds.export');
-
-
-        Route::prefix('ndr')->name('ndr.')->group(function () {
-            Route::get('/', [NdrController::class, 'index'])->name('index');
-            Route::get('/export', [NdrController::class, 'export'])->name('export');
-            Route::get('/{ndr}', [NdrController::class, 'show'])->name('show');
-            Route::patch('/{ndr}/reattempt', [NdrController::class, 'reattempt'])->name('reattempt');
-            Route::patch('/{ndr}/mark-delivered', [NdrController::class, 'markDelivered'])->name('mark-delivered');
-            Route::patch('/{ndr}/mark-rto', [NdrController::class, 'markRto'])->name('mark-rto');
-            Route::patch('/{ndr}/cancel', [NdrController::class, 'cancel'])->name('cancel');
-        });
-
-
-        // Stock Management routes
-        Route::get('stock', [StockManagementController::class, 'index'])->name('stock.index');
-        Route::get('stock/export', [StockManagementController::class, 'export'])->name('stock.export');
-        Route::post('stock/bulk-update', [StockManagementController::class, 'bulkUpdate'])->name('stock.bulk-update');
-        Route::post('stock/add-entry', [StockManagementController::class, 'addStockEntry'])->name('stock.add-entry');
-        Route::post('stock/{product}/update', [StockManagementController::class, 'updateStock'])->name('stock.update');
-        Route::post('stock/{product}/restock', [StockManagementController::class, 'restock'])->name('stock.restock');
-        Route::get('stock/{product}/history', [StockManagementController::class, 'history'])->name('stock.history');
-        Route::get('stock/bulk-update/template', [StockManagementController::class, 'downloadTemplate'])->name('stock.bulk-update.template');
-        Route::post('stock/variant/{variant}/update', [StockManagementController::class, 'updateVariantStock'])->name('stock.variant.update');
-        Route::post('stock/variant/{variant}/restock', [StockManagementController::class, 'restockVariant'])->name('stock.variant.restock');
-        Route::get('stock/variant/{variant}/history', [StockManagementController::class, 'historyVariant'])->name('stock.variant.history');
-        Route::get('stock/alerts', [StockAlertsController::class, 'index'])->name('stock.alerts');
-        Route::post('stock/alerts/{product}/restock', [StockAlertsController::class, 'restock'])->name('stock.alerts.restock');
-        Route::post('stock/alerts/settings/thresholds', [StockAlertsController::class, 'updateThresholds'])->name('stock.alerts.thresholds');
-        Route::post('stock/alerts/settings/notifications', [StockAlertsController::class, 'updateNotifications'])->name('stock.alerts.notifications');
-        Route::get('stock/alerts/export', [StockAlertsController::class, 'export'])->name('stock.alerts.export');
-        Route::post('stock/alerts/restock-all-critical', [StockAlertsController::class, 'restockAllCritical'])->name('stock.alerts.restock.all');
-        Route::post('stock/alerts/variant/{variant}/restock', [StockAlertsController::class, 'restockVariant'])->name('stock.alerts.variant.restock');
-
-        Route::get('/reviews', [App\Http\Controllers\Admin\ProductReviewController::class, 'index'])->name('reviews.index');
-        Route::get('/reviews/{review}', [App\Http\Controllers\Admin\ProductReviewController::class, 'show'])->name('reviews.show');
-        Route::patch('/reviews/{review}/approve', [App\Http\Controllers\Admin\ProductReviewController::class, 'approve'])->name('reviews.approve');
-        Route::patch('/reviews/{review}/reject', [App\Http\Controllers\Admin\ProductReviewController::class, 'reject'])->name('reviews.reject');
-        Route::delete('/reviews/{review}', [App\Http\Controllers\Admin\ProductReviewController::class, 'destroy'])->name('reviews.destroy');
-        Route::get('/reviews/export/csv', [App\Http\Controllers\Admin\ProductReviewController::class, 'export'])->name('reviews.export');
 
         // Admin Settings routes
         Route::get('/admin-setting', [AdminSettingController::class, 'index'])->name('admin-setting.index');
@@ -390,25 +112,6 @@ Route::prefix('admin')->name('admin.')->group(function () {
         });
 
 
-        // Reports routes
-        Route::get('/reports/sales', [SalesReportController::class, 'index'])->name('reports.sales');
-        Route::get('/reports/sales/export', [SalesReportController::class, 'export'])->name('reports.sales.export');
-        Route::get('/reports/products', [ProductReportController::class, 'index'])->name('reports.products');
-        Route::get('reports/products/export/csv', [ProductReportController::class, 'exportCsv'])->name('reports.products.export.csv');
-        Route::get('reports/products/export/pdf', [ProductReportController::class, 'exportPdf'])->name('reports.products.export.pdf');
-        Route::get('reports/customers', [CustomerReportController::class, 'index'])->name('reports.customers');
-        Route::get('reports/customers/export/excel', [CustomerReportController::class, 'exportExcel'])->name('reports.customers.export.excel');
-        Route::get('reports/customers/export/pdf', [CustomerReportController::class, 'exportPdf'])->name('reports.customers.export.pdf');
-        Route::get('/reports/order-reports', [OrderReportController::class, 'index'])->name('reports.order-reports');
-        Route::get('/reports/order-reports/export-excel', [OrderReportController::class, 'exportExcel'])->name('reports.order-reports.export-excel');
-        Route::get('/reports/order-reports/export-pdf', [OrderReportController::class, 'exportPdf'])->name('reports.order-reports.export-pdf');
-        Route::get('/reports/coupon-reports', [CouponReportController::class, 'index'])->name('reports.coupon-reports');
-        Route::get('/reports/coupon-reports/export', [CouponReportController::class, 'export'])->name('reports.coupon-reports.export');
-        Route::get('/reports/tax-reports', [TaxReportController::class, 'index'])->name('reports.tax-reports');
-        Route::get('/reports/tax-reports/export-csv', [TaxReportController::class, 'exportCsv'])->name('reports.tax-reports.export-csv');
-        Route::get('reports/tax-reports/export-credit-notes-csv', [TaxReportController::class, 'exportCreditNotesCsv'])->name('reports.tax-reports.export-credit-notes-csv');
-        Route::get('reports/ndr', [NdrReportController::class, 'index'])->name('reports.ndr');
-        Route::get('reports/ndr/export', [NdrReportController::class, 'export'])->name('reports.ndr.export');
 
     });
 });
