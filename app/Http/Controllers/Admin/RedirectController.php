@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Redirect;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class RedirectController extends Controller
 {
@@ -46,13 +47,63 @@ class RedirectController extends Controller
         return view('admin.security.redirects', compact('redirects', 'stats'));
     }
 
+    /* ─────────────────────────────────────────────
+     | URL normalisers
+     | The fallback route matches on a clean path like "/about.html"
+     | (leading slash, no trailing slash, no query, no domain),
+     | so every from_url must be stored in exactly that shape.
+     ───────────────────────────────────────────── */
+
+    /** "https://site.com/old/page.html?x=1" or "old/page.html/" => "/old/page.html" */
+    private function normalizeFrom(?string $url): string
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return '';
+        }
+
+        if (preg_match('#^https?://#i', $url)) {
+            $url = (string) parse_url($url, PHP_URL_PATH);
+        }
+
+        // drop query string / fragment
+        $url = preg_split('/[?#]/', $url)[0];
+
+        $url = '/' . ltrim($url, '/');
+
+        return $url === '/' ? '/' : rtrim($url, '/');
+    }
+
+    /** Destination: keep full external URLs as they are, make internal ones start with "/" */
+    private function normalizeTo(?string $url): ?string
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return null;
+        }
+
+        if (preg_match('#^https?://#i', $url)) {
+            return $url;
+        }
+
+        return '/' . ltrim($url, '/');
+    }
+
     public function store(Request $request)
     {
+        $request->merge([
+            'from_url' => $this->normalizeFrom($request->from_url),
+            'to_url'   => $this->normalizeTo($request->to_url),
+        ]);
+
         $validator = Validator::make($request->all(), [
-            'from_url' => 'required|string|max:255',
-            'to_url'   => 'nullable|string|max:255|required_unless:type,410',
-            'type'     => 'required|in:301,302,410',
-            'note'     => 'nullable|string|max:255',
+            'from_url' => ['required', 'string', 'max:255', 'unique:redirects,from_url'],
+            'to_url'   => ['nullable', 'string', 'max:255', 'required_unless:type,410', 'different:from_url'],
+            'type'     => ['required', 'in:301,302,410'],
+            'note'     => ['nullable', 'string', 'max:255'],
+        ], [
+            'from_url.unique'  => 'A redirect for this old URL already exists.',
+            'to_url.different' => 'Old and new URL cannot be the same (redirect loop).',
         ]);
 
         if ($validator->fails()) {
@@ -72,10 +123,18 @@ class RedirectController extends Controller
 
     public function update(Request $request, Redirect $redirect)
     {
+        $request->merge([
+            'from_url' => $this->normalizeFrom($request->from_url),
+            'to_url'   => $this->normalizeTo($request->to_url),
+        ]);
+
         $validator = Validator::make($request->all(), [
-            'from_url' => 'required|string|max:255',
-            'to_url'   => 'nullable|string|max:255|required_unless:type,410',
-            'type'     => 'required|in:301,302,410',
+            'from_url' => ['required', 'string', 'max:255', Rule::unique('redirects', 'from_url')->ignore($redirect->id)],
+            'to_url'   => ['nullable', 'string', 'max:255', 'required_unless:type,410', 'different:from_url'],
+            'type'     => ['required', 'in:301,302,410'],
+        ], [
+            'from_url.unique'  => 'A redirect for this old URL already exists.',
+            'to_url.different' => 'Old and new URL cannot be the same (redirect loop).',
         ]);
 
         if ($validator->fails()) {
@@ -144,7 +203,11 @@ class RedirectController extends Controller
 
     public function downloadTemplate()
     {
-        $csv = "from_url,to_url,type\n/old-page,/new-page,301\n/temp-sale,/sale-2025,302\n/deleted-product,,410\n";
+        $csv  = "from_url,to_url,type\n";
+        $csv .= "/about-us.html,/about,301\n";
+        $csv .= "/contact-us.html,/contact,301\n";
+        $csv .= "/index.html,/,301\n";
+        $csv .= "/old-removed-page.html,,410\n";
 
         return response($csv, 200, [
             'Content-Type'        => 'text/csv',
@@ -161,10 +224,12 @@ class RedirectController extends Controller
         $file   = $request->file('csv_file');
         $handle = fopen($file->getRealPath(), 'r');
 
-        $header    = fgetcsv($handle); // skip header row
-        $imported  = 0;
-        $skipped   = 0;
-        $rowCount  = 0;
+        fgetcsv($handle); // skip header row
+
+        $imported = 0;
+        $updated  = 0;
+        $skipped  = 0;
+        $rowCount = 0;
 
         while (($row = fgetcsv($handle)) !== false) {
             $rowCount++;
@@ -172,20 +237,33 @@ class RedirectController extends Controller
 
             [$fromUrl, $toUrl, $type] = array_pad($row, 3, null);
 
-            if (empty($fromUrl) || !in_array($type, ['301', '302', '410'])) {
+            $type = trim((string) $type);
+            $from = $this->normalizeFrom($fromUrl);
+            $to   = $type === '410' ? null : $this->normalizeTo($toUrl);
+
+            if ($from === '' || !in_array($type, ['301', '302', '410'], true)) {
                 $skipped++;
                 continue;
             }
 
-            Redirect::create([
-                'from_url'  => trim($fromUrl),
-                'to_url'    => $type === '410' ? null : trim($toUrl ?? ''),
-                'type'      => $type,
-                'is_active' => true,
-                'note'      => 'Bulk imported',
-            ]);
+            // 301/302 need a destination, and it must differ from the source
+            if ($type !== '410' && ($to === null || $to === $from)) {
+                $skipped++;
+                continue;
+            }
 
-            $imported++;
+            // Same old URL imported again => update that rule instead of creating a duplicate
+            $redirect = Redirect::updateOrCreate(
+                ['from_url' => $from],
+                [
+                    'to_url'    => $to,
+                    'type'      => $type,
+                    'is_active' => true,
+                    'note'      => 'Bulk imported',
+                ]
+            );
+
+            $redirect->wasRecentlyCreated ? $imported++ : $updated++;
         }
 
         fclose($handle);
@@ -193,6 +271,7 @@ class RedirectController extends Controller
         return response()->json([
             'success'  => true,
             'imported' => $imported,
+            'updated'  => $updated,
             'skipped'  => $skipped,
         ]);
     }

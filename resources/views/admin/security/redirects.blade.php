@@ -49,6 +49,7 @@
 
     .sp-redirect-form { display: grid; grid-template-columns: 1fr 1fr 130px 44px; gap: 10px; align-items: end; padding: 16px 20px; border-bottom: 1px solid var(--sp-border); background: #f9fafb; }
     @media(max-width:700px) { .sp-redirect-form { grid-template-columns: 1fr 1fr; } }
+    .sp-form-hint { padding: 8px 20px; border-bottom: 1px solid var(--sp-border); background: #f9fafb; font-size: 11.5px; color: var(--sp-text-hint); }
     .sp-field { display: flex; flex-direction: column; gap: 5px; }
     .sp-label { font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; color: var(--sp-text-hint); }
     .sp-input, .sp-select { width: 100%; border: 1px solid var(--sp-border); border-radius: var(--sp-radius-md); padding: 0 10px; height: 36px; font-size: 13px; color: var(--sp-text-primary); background: var(--sp-surface); outline: none; font-family: var(--sp-font); transition: border-color .15s, box-shadow .15s; appearance: none; }
@@ -155,7 +156,7 @@
             <div class="sp-banner blue">
                 <i class="fa fa-circle-info"></i>
                 <div>
-                    <strong>What are redirects?</strong> When you rename a product, change a URL slug, or remove a page, the old URL becomes a dead link (404). Setting a redirect tells Google and browsers to automatically send visitors from the old URL to the new one — protecting your SEO rankings and customer experience.
+                    <strong>What are redirects?</strong> When a page is renamed, moved or removed (for example an old <code>.html</code> page of the previous website), its old URL becomes a dead link (404). A redirect automatically sends visitors and search engines from the old URL to the new page, so you keep your SEO rankings and visitors never land on an error page.
                     <div style="margin-top:6px;display:flex;gap:16px;font-size:12px;flex-wrap:wrap">
                         <span><strong>301 Permanent</strong> — Page moved forever. Google transfers full SEO value to the new URL.</span>
                         <span><strong>302 Temporary</strong> — Page moved short-term. Google keeps the old URL indexed.</span>
@@ -185,12 +186,12 @@
                         <!-- Add redirect inline form -->
                         <div class="sp-redirect-form" id="addRowForm">
                             <div class="sp-field">
-                                <label class="sp-label">From URL (Old) <span style="color:var(--sp-red)">*</span></label>
-                                <input type="text" id="newFrom" class="sp-input" placeholder="/old-product-name">
+                                <label class="sp-label">From URL (Old HTML page) <span style="color:var(--sp-red)">*</span></label>
+                                <input type="text" id="newFrom" class="sp-input" placeholder="/about-us.html">
                             </div>
                             <div class="sp-field">
-                                <label class="sp-label">To URL (New)</label>
-                                <input type="text" id="newTo" class="sp-input" placeholder="/new-product-name">
+                                <label class="sp-label">To URL (New page)</label>
+                                <input type="text" id="newTo" class="sp-input" placeholder="/about">
                             </div>
                             <div class="sp-field">
                                 <label class="sp-label">Type</label>
@@ -205,6 +206,9 @@
                             <button type="button" class="sp-add-btn" id="addBtn" onclick="addRedirect()" title="Add Redirect">
                                 <i class="fa fa-plus"></i>
                             </button>
+                        </div>
+                        <div class="sp-form-hint">
+                            <i class="fa fa-circle-info"></i> Enter the path only, e.g. <code>/about-us.html</code>. If you paste a full link, the domain and <code>?query</code> part are removed automatically.
                         </div>
 
                         <!-- Filter bar (GET form so filters are shareable / bookmarkable) -->
@@ -313,7 +317,7 @@
                         <div class="sp-card-body">
                             <div class="sp-banner amber" style="margin-bottom:16px">
                                 <i class="fa fa-triangle-exclamation"></i>
-                                <div>CSV must have 3 columns: <strong>from_url, to_url, type</strong> (301 / 302 / 410). First row should be the header. Max 1,000 rows per import.</div>
+                                <div>CSV must have 3 columns: <strong>from_url, to_url, type</strong> (301 / 302 / 410). First row should be the header. Max 1,000 rows per import. If an old URL already exists, its rule is updated instead of duplicated.</div>
                             </div>
                             <div class="sp-import-zone" id="importZone">
                                 <input type="file" accept=".csv" id="csvInput" onchange="handleCSV(this)">
@@ -380,9 +384,9 @@
                                     <strong style="color:var(--sp-text-primary);font-size:13px">Permanent Move</strong>
                                 </div>
                                 <ul style="margin:0;padding-left:16px;color:var(--sp-text-secondary)">
-                                    <li>Product URL / slug changed</li>
-                                    <li>Category restructured</li>
-                                    <li>Old blog post URL updated</li>
+                                    <li>Old .html page now has a new URL</li>
+                                    <li>Page URL / slug changed</li>
+                                    <li>Sections merged or restructured</li>
                                     <li>Domain migration</li>
                                 </ul>
                             </div>
@@ -393,7 +397,7 @@
                                     <strong style="color:var(--sp-text-primary);font-size:13px">Temporary Move</strong>
                                 </div>
                                 <ul style="margin:0;padding-left:16px;color:var(--sp-text-secondary)">
-                                    <li>Seasonal sale page</li>
+                                    <li>Seasonal or campaign page</li>
                                     <li>A/B test landing page</li>
                                     <li>Maintenance redirect</li>
                                 </ul>
@@ -405,8 +409,8 @@
                                     <strong style="color:var(--sp-text-primary);font-size:13px">Gone (Deleted)</strong>
                                 </div>
                                 <ul style="margin:0;padding-left:16px;color:var(--sp-text-secondary)">
-                                    <li>Product discontinued</li>
-                                    <li>Page permanently removed</li>
+                                    <li>Old page permanently removed</li>
+                                    <li>No replacement page exists</li>
                                     <li>Tells Google to deindex fast</li>
                                 </ul>
                             </div>
@@ -428,7 +432,7 @@
                             </div>
                             <div style="display:flex;gap:7px;margin-bottom:8px">
                                 <i class="fa fa-circle-check" style="color:var(--sp-green);margin-top:2px;flex-shrink:0"></i>
-                                <span>Add redirects <strong style="color:var(--sp-text-primary)">before</strong> changing URLs in your product/page settings.</span>
+                                <span>Point each old page to its <strong style="color:var(--sp-text-primary)">closest matching</strong> new page, not always the home page.</span>
                             </div>
                             <div style="display:flex;gap:7px">
                                 <i class="fa fa-circle-check" style="color:var(--sp-green);margin-top:2px;flex-shrink:0"></i>
@@ -464,7 +468,7 @@ const ROUTES = {
 function toggleToUrlRequirement() {
     const type = document.getElementById('newType').value;
     const toInput = document.getElementById('newTo');
-    toInput.placeholder = type === '410' ? 'Not needed for 410' : '/new-product-name';
+    toInput.placeholder = type === '410' ? 'Not needed for 410' : '/about';
 }
 
 /* ── Add new redirect (real POST) ── */
@@ -495,7 +499,7 @@ function addRedirect() {
         if (data.success) {
             document.getElementById('newFrom').value = '';
             document.getElementById('newTo').value   = '';
-            Swal.fire({ icon:'success', title:'Redirect Added', text:`${from} → ${type === '410' ? '(Gone)' : to} [${type}]`, timer:1800, showConfirmButton:false })
+            Swal.fire({ icon:'success', title:'Redirect Added', text:`${data.redirect.from_url} → ${type === '410' ? '(Gone)' : data.redirect.to_url} [${type}]`, timer:1800, showConfirmButton:false })
                 .then(() => window.location.reload());
         } else {
             const msg = data.errors ? Object.values(data.errors).flat().join(', ') : 'Something went wrong.';
@@ -729,7 +733,9 @@ function handleCSV(input) {
             Swal.fire({
                 icon: 'success',
                 title: 'Import Complete',
-                html: `Imported <strong>${data.imported}</strong> redirects.${data.skipped ? ` Skipped <strong>${data.skipped}</strong> invalid rows.` : ''}`,
+                html: `Imported <strong>${data.imported}</strong> new redirects.`
+                    + (data.updated ? ` Updated <strong>${data.updated}</strong> existing.` : '')
+                    + (data.skipped ? ` Skipped <strong>${data.skipped}</strong> invalid rows.` : ''),
                 confirmButtonColor: '#303d89'
             }).then(() => window.location.reload());
         } else {

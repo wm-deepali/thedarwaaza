@@ -18,7 +18,7 @@
       <link rel="icon" type="image/png" href="{{ asset('storage/' . $favicon) }}">
       <link rel="shortcut icon" href="{{ asset('storage/' . $favicon) }}">
   @else
-      <link rel="icon" type="image/png" href="{{ asset('assets/images/logo.png') }}">
+      <link rel="icon" type="image/png" href="{{ asset('assets/images/logo/logo.png') }}">
   @endif
 
   <!-- VENDOR CSS — exact same order as original -->
@@ -227,7 +227,7 @@ body {
             <!-- Logo -->
             <div class="admin-logo">
                 <div class="admin-logo-text">
-                    <span class="admin-logo-brand">Archana Saree Emporium</span>
+                    <span class="admin-logo-brand">The Darwaaza</span>
                     <span class="admin-logo-sub">Admin Panel</span>
                 </div>
             </div>
